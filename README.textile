@@ -1,0 +1,3 @@
+h1. Delta Robot v3 - A kinematic linkage robot for students
+
+Please visit "Marginally Clever":http://www.marginallyclever.com/shop/ for the accompanying hardware kit and links to the support forums and assembly instructions.
