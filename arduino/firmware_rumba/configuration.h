@@ -25,8 +25,8 @@
 #define MAX_ANGLE            (90+85)
 #define MIN_ANGLE            (90-30)
 
-#define STEPS_PER_CM         (10)
-#define STEPS_PER_DEG        (5)
+#define SEGMENTS_PER_CM      (1)
+#define SEGMENTS_PER_DEG     (5)
 
 // ** Nothing below this line needs to be configured **
 

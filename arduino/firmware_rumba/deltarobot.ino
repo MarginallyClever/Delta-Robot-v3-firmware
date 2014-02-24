@@ -275,7 +275,8 @@ void deltarobot_line(float x, float y, float z,float new_feed_rate) {
   Vector3 dp = destination - start;  // far do we have to go? 
 
   // we need some variables in the loop.  Declaring them outside the loop can be more efficient.
-  int total_steps=4;
+  
+  int total_steps = ceil(dp.Length() / SEGMENTS_PER_CM );
   int i;
   float f;
   // until the interpolation finishes...
