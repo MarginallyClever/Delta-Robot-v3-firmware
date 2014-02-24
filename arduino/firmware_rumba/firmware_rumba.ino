@@ -19,10 +19,9 @@
 //------------------------------------------------------------------------------
 // GLOBALS
 //------------------------------------------------------------------------------
-float feed_rate=10;  // how fast the EE moves in cm/s
+float feed_rate=40;  // how fast the EE moves in cm/s
 
 // did you put it together backwards?
-// @TODO: store this in EEPROM
 int reverse=0;
 
 // absolute or relative movements?

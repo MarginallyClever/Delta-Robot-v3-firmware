@@ -70,6 +70,8 @@ void setup_robot() {
   robot.ee.z = robot.arms[0].shoulder.z - bb;
   
   update_ik();
+  
+  segment_setup();
 }
 
 
@@ -295,7 +297,15 @@ void deltarobot_line(float x, float y, float z,float new_feed_rate) {
 
     // update the inverse kinematics
     update_ik();
-    
+/*
+    Serial.print(i);
+    Serial.print('=');
+    Serial.print(robot.arms[0].angle);
+    Serial.print(',');
+    Serial.print(robot.arms[1].angle);
+    Serial.print(',');
+    Serial.println(robot.arms[2].angle);
+*/
     motor_segment(robot.arms[0].angle,
                   robot.arms[1].angle,
                   robot.arms[2].angle,

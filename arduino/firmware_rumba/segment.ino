@@ -37,6 +37,16 @@ int get_prev_segment(int i) {
 }
 
 
+void segment_setup() {
+  current_segment=0;
+  last_segment=0;
+  Segment &old_seg = line_segments[get_prev_segment(last_segment)];
+  old_seg.a[0].step_count=0;
+  old_seg.a[1].step_count=0;
+  old_seg.a[2].step_count=0;
+}
+
+
 /**
  * Add a segment to the line buffer if there is room.
  */
@@ -75,11 +85,14 @@ void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate) {
 
   new_seg.steps_left = new_seg.steps;
   
-#ifdef VERBOSE
+//#ifdef VERBOSE
   Serial.print(F("At "));  Serial.println(current_segment);
   Serial.print(F("Adding "));  Serial.println(last_segment);
   Serial.print(F("Steps= "));  Serial.println(new_seg.steps_left);
-#endif
+  Serial.print(F("d0= "));  Serial.println(new_seg.a[0].delta);
+  Serial.print(F("d1= "));  Serial.println(new_seg.a[1].delta);
+  Serial.print(F("d2= "));  Serial.println(new_seg.a[2].delta);
+//#endif
 
   if( current_segment==last_segment ) {
     timer_set_frequency(new_feed_rate);
