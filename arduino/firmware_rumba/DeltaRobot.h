@@ -16,6 +16,8 @@ struct DeltaRobot {
   Arm arms[NUM_AXIES];
   Vector3 ee;
   Joint base;
+  Vector3 tool_offset[NUM_TOOLS];
+  int current_tool;
   float default_height;
 };
 

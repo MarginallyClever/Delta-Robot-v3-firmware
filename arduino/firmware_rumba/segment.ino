@@ -62,8 +62,6 @@ void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate) {
   new_seg.a[1].step_count = n1;
   new_seg.a[2].step_count = n2;
   
-  int i;
-
   Segment &old_seg = line_segments[get_prev_segment(last_segment)];
   new_seg.a[0].delta = n0 - old_seg.a[0].step_count;
   new_seg.a[1].delta = n1 - old_seg.a[1].step_count;
@@ -72,6 +70,7 @@ void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate) {
   new_seg.steps=0;
   new_seg.feed_rate=new_feed_rate;
 
+  int i;
   for(i=0;i<NUM_AXIES;++i) {
     new_seg.a[i].over = 0;
     new_seg.a[i].dir = (new_seg.a[i].delta < 0 ? LOW:HIGH);
@@ -164,9 +163,7 @@ void timer_set_frequency(long desired_freq_hz) {
 /**
  * Process all line segments in the ring buffer.  Uses bresenham's line algorithm to move all motors.
  */
-ISR(TIMER1_COMPA_vect) {
-   digitalWrite(13,digitalRead(13)^1);
-   
+ISR(TIMER1_COMPA_vect) {   
   // segment buffer empty? do nothing
   if( current_segment == last_segment ) return;
   

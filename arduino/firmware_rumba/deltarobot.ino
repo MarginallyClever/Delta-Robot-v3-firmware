@@ -29,7 +29,7 @@ DeltaRobot robot;
 /**
  * setup the geometry of the robot for faster inverse kinematics later
  */
-void setup_robot() {
+void deltarobot_setup() {
   Vector3 temp,n;
   int i;
 
@@ -69,8 +69,9 @@ void setup_robot() {
   float bb = sqrt(cc*cc - aa*aa);
   robot.ee.z = robot.arms[0].shoulder.z - bb;
   
-  update_ik();
+  robot.current_tool=0;
   
+  update_ik();
   segment_setup();
 }
 
@@ -244,7 +245,7 @@ void deltarobot_find_home() {
   }
 
   // recalculate XYZ positions
-  setup_robot();
+  deltarobot_setup();
 }
 
 
@@ -255,6 +256,10 @@ void deltarobot_find_home() {
  * @param destination z coordinate
  */
 void deltarobot_line(float x, float y, float z,float new_feed_rate) {
+  x-=robot.tool_offset[robot.current_tool].x;
+  y-=robot.tool_offset[robot.current_tool].y;
+  z-=robot.tool_offset[robot.current_tool].z;
+  
   if( outOfBounds(x, y, z) ) {
     Serial.println(F("Destination out of bounds."));
     return;
@@ -322,10 +327,9 @@ void deltarobot_line(float x, float y, float z,float new_feed_rate) {
  */
 void deltarobot_position(float npx,float npy,float npz) {
   // here is a good place to add sanity tests
-  robot.ee.x=npx;
-  robot.ee.y=npy;
-  robot.ee.z=npz;
-
+  
+  robot.ee = Vector3(npx,npy,npz)-robot.tool_offset[robot.current_tool];
+  
   update_ik();
   
   robot.arms[0].last_step = robot.arms[0].angle * MICROSTEP_PER_DEGREE;
@@ -340,16 +344,14 @@ void deltarobot_position(float npx,float npy,float npz) {
  * print the current position, feedrate, and absolute mode.
  */
 void deltarobot_where() {
-  output("X",robot.ee.x);
-  output("Y",robot.ee.y);
-  output("Z",robot.ee.z);
+  Vector3 offset_pos=robot.ee+robot.tool_offset[robot.current_tool];
+  output("X",offset_pos.x);
+  output("Y",offset_pos.y);
+  output("Z",offset_pos.z);
   output("F",feed_rate);
   Serial.println(mode_abs?"ABS":"REL");
   outputsteps();
 } 
-
-
-
 
 
 /**
@@ -380,6 +382,27 @@ char deltarobot_read_switches() {
 #endif
   return hit;
 }
+
+
+void deltarobot_tool_offset(int axis,float x,float y,float z) {
+  robot.tool_offset[axis].x=x;
+  robot.tool_offset[axis].y=y;
+  robot.tool_offset[axis].z=z;
+}
+
+Vector3 deltarobot_get_end_plus_offset() {
+  return Vector3(robot.tool_offset[robot.current_tool].x + robot.ee.x,
+                 robot.tool_offset[robot.current_tool].y + robot.ee.y,
+                 robot.tool_offset[robot.current_tool].z + robot.ee.z);
+}
+
+
+void deltarobot_tool_change(int tool_id) {
+  if(tool_id < 0) tool_id=0;
+  if(tool_id > NUM_TOOLS) tool_id=NUM_TOOLS;
+  robot.current_tool=tool_id;
+}
+
 
 /**
 * This file is part of Delta Robot v8.

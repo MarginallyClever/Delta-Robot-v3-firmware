@@ -21,6 +21,7 @@
 #define MICROSTEPS           (16.0)
 #define MAX_FEEDRATE         (16000.0)  // depends on timer interrupt & hardware
 #define MIN_FEEDRATE         (0.01)
+#define DEFAULT_FEEDRATE     (500)
 
 #define MAX_ANGLE            (90+85)
 #define MIN_ANGLE            (90-30)
@@ -31,6 +32,7 @@
 // ** Nothing below this line needs to be configured **
 
 #define NUM_AXIES            (3)
+#define NUM_TOOLS            (6)
 
 #define TWOPI                (PI*2.0)
 #define DEG2RAD              (PI/180.0)

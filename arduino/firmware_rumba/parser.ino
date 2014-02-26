@@ -63,29 +63,48 @@ void outputvector(Vector3 &v,char*name) {
 void parser_processCommand() {
   int cmd = parsenumber('G',-1);
   switch(cmd) {
-  case  0: // move linear
-  case  1: // move linear
-      deltarobot_line( parsenumber('X',(mode_abs?robot.ee.x:0)) + (mode_abs?0:robot.ee.x),
-                       parsenumber('Y',(mode_abs?robot.ee.y:0)) + (mode_abs?0:robot.ee.y),
-                       parsenumber('Z',(mode_abs?robot.ee.z:0)) + (mode_abs?0:robot.ee.z),
+  case  0:
+  case  1: {  // move in a line
+      Vector3 offset=deltarobot_get_end_plus_offset();
+      deltarobot_line( parsenumber('X',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
+                       parsenumber('Y',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
+                       parsenumber('Z',(mode_abs?offset.z:0)) + (mode_abs?0:offset.z),
                        feedrate(parsenumber('F',feed_rate)) );
     break;
+  }
   case  4:  pause(parsenumber('P',0)*1000);  break;  // dwell
-  case 28:  deltarobot_find_home();  break;  
+  case 28:  deltarobot_find_home();  break;
+  case 54:
+  case 55:
+  case 56:
+  case 57:
+  case 58:
+  case 59: {  // 54-59 tool offsets
+    int axis=cmd-54;
+    deltarobot_tool_offset(axis,parsenumber('X',robot.tool_offset[axis].x),
+                                parsenumber('Y',robot.tool_offset[axis].y),
+                                parsenumber('Z',robot.tool_offset[axis].z));
+    break;
+  }
   case 90:  mode_abs=1;  break;  // absolute mode
   case 91:  mode_abs=0;  break;  // relative mode
 
   // See hexapod_position() for note about why G92 is removed
-  case 92:  // set logical position
-    deltarobot_position( parsenumber('X',robot.ee.x),
-                         parsenumber('Y',robot.ee.y),
-                         parsenumber('Z',robot.ee.z) );
+  case 92: { // set logical position
+    Vector3 offset = deltarobot_get_end_plus_offset();
+    deltarobot_position( parsenumber('X',offset.x),
+                         parsenumber('Y',offset.y),
+                         parsenumber('Z',offset.z) );
+    }
     break;
   default:  break;
   }
 
   cmd = parsenumber('M',-1);
   switch(cmd) {
+  case 6:
+    deltarobot_tool_change(parsenumber('T',0));
+    break;
   case 17:  motor_enable();  break;
   case 18:  motor_disable();  break;
   case 100:  help();  break;

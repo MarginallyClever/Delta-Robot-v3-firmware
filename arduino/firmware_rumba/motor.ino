@@ -49,10 +49,10 @@ void outputsteps() {
 /**
  * Use Bresenham's line algorithm to synchronize the movement of all three motors and approximate movement in a straight line.
  */
-void motor_segment(float x,float y,float z,float fr) {
-  robot.arms[0].new_step = x*MICROSTEP_PER_DEGREE;
-  robot.arms[1].new_step = y*MICROSTEP_PER_DEGREE;
-  robot.arms[2].new_step = z*MICROSTEP_PER_DEGREE;
+void motor_segment(float a0,float a1,float a2,float fr) {
+  robot.arms[0].new_step = a0 * MICROSTEP_PER_DEGREE;
+  robot.arms[1].new_step = a1 * MICROSTEP_PER_DEGREE;
+  robot.arms[2].new_step = a2 * MICROSTEP_PER_DEGREE;
 
   motor_prepare_segment(robot.arms[0].new_step,
                         robot.arms[1].new_step,

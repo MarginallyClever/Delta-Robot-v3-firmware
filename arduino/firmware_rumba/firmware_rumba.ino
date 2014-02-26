@@ -88,7 +88,7 @@ void help() {
   Serial.println(F("M17/M18; - enable/disable motors"));
   Serial.println(F("M100; - this help message"));
   Serial.println(F("M114; - report position and feedrate"));
-  Serial.println(F("F, G00, G01, G04, G17, G18, G28, G90, G91, G92 as described by http://en.wikipedia.org/wiki/G-code"));
+  Serial.println(F("F, G00, G01, G04, G17, G18, G28, G54-G59, G90, G91, G92, M06 as described by http://en.wikipedia.org/wiki/G-code"));
 }
 
 
@@ -100,12 +100,11 @@ void setup() {
 
   motor_setup();
 
-  setup_robot();
-  // @TODO: Is this necessary?
+  deltarobot_setup();
   deltarobot_position(0,0,0);
   
   help();  // say hello
-  feedrate(200);  // set default speed
+  feedrate(DEFAULT_FEEDRATE);  // set default speed
   parser_ready();
 }
 
