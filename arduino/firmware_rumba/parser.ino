@@ -140,6 +140,11 @@ void parser_listen() {
     buffer[sofar]=0;  // end the buffer so string functions work right
     Serial.print(F("\r\n"));  // echo a return character for humans
     parser_processCommand();  // do something with the command
+
+#ifdef ONE_COMMAND_AT_A_TIME
+    while( current_segment != last_segment );
+#endif
+
     parser_ready();
   }
 }

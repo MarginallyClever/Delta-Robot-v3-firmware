@@ -26,8 +26,14 @@
 #define MAX_ANGLE            (90+85)
 #define MIN_ANGLE            (90-30)
 
+// related to number of instructions that can be buffered
+#define MAX_SEGMENTS         (64)
+
 #define SEGMENTS_PER_CM      (1)
 #define SEGMENTS_PER_DEG     (5)
+
+// turn this on if you need the robot to NOT buffer commands
+//#define ONE_COMMAND_AT_A_TIME  (1)
 
 // ** Nothing below this line needs to be configured **
 
