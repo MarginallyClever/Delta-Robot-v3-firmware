@@ -67,8 +67,9 @@ void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate) {
   new_seg.a[1].delta = n1 - old_seg.a[1].step_count;
   new_seg.a[2].delta = n2 - old_seg.a[2].step_count;
 
-  new_seg.steps=0;
-  new_seg.feed_rate=new_feed_rate;
+  new_seg.steps = 0;
+  new_seg.feed_rate_start =
+  new_seg.feed_rate_end   = new_feed_rate;
 
   int i;
   for(i=0;i<NUM_AXIES;++i) {
@@ -84,14 +85,14 @@ void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate) {
 
   new_seg.steps_left = new_seg.steps;
   
-//#ifdef VERBOSE
+#ifdef VERBOSE > 1
   Serial.print(F("At "));  Serial.println(current_segment);
   Serial.print(F("Adding "));  Serial.println(last_segment);
   Serial.print(F("Steps= "));  Serial.println(new_seg.steps_left);
   Serial.print(F("d0= "));  Serial.println(new_seg.a[0].delta);
   Serial.print(F("d1= "));  Serial.println(new_seg.a[1].delta);
   Serial.print(F("d2= "));  Serial.println(new_seg.a[2].delta);
-//#endif
+#endif
 
   if( current_segment==last_segment ) {
     timer_set_frequency(new_feed_rate);
@@ -128,13 +129,19 @@ void timer_set_frequency(long desired_freq_hz) {
   } while(counter_value > MAX_COUNTER && prescaler_index<4);
   
   if( prescaler_index>=5 ) {
+#if VERBOSE > 3
+    // if Serial.print is called from inside a timing thread it will probably crash the arduino.
+    // Serial.print takesk too long, the interrupt will interrupt itself.
     Serial.println(F("Timer could not be set: Desired frequency out of bounds."));
+#endif
     return;
   }
   
-//  Serial.print("freq=");
-//  Serial.print(desired_freq_hz);
-  
+#if VERBOSE > 4
+  Serial.print("freq=");
+  Serial.print(desired_freq_hz);
+#endif
+
   prescaler_index++;
 
   // disable global interrupts
@@ -178,12 +185,17 @@ ISR(TIMER1_COMPA_vect) {
   Segment &seg = line_segments[current_segment];
   // is this a fresh new segment?
   if( seg.steps == seg.steps_left ) {
+    // yes
     // set the direction pins
     for(j=0;j<NUM_AXIES;++j) {
       digitalWrite( robot.arms[j].motor_dir_pin, line_segments[current_segment].a[j].dir );
     }
-    // set frequency to segment feed rate
-    timer_set_frequency(seg.feed_rate);
+    // set frequency to seg.feed_rate_start
+    timer_set_frequency(seg.feed_rate_start);
+  } else {
+    // no
+    // adjust frequency towards seg.feed_rate_end
+    
   }
 
   // make a step

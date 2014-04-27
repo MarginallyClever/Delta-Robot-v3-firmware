@@ -11,7 +11,7 @@
 //------------------------------------------------------------------------------
 // CONSTANTS
 //------------------------------------------------------------------------------
-//#define VERBOSE              (1)  // add to get a lot more serial output.
+#define VERBOSE              (0)  // increasing number increases output
 
 #define VERSION              (1)  // firmware version
 #define BAUD                 (57600)  // How fast is the Arduino talking?
@@ -54,7 +54,8 @@
 #define SHOULDER_TO_ELBOW    (5)  // cm
 #define ELBOW_TO_WRIST       (16.5f)  // cm
 
-#define CENTER_TO_SHOULDER   (5.248f)  // cm
+//#define CENTER_TO_SHOULDER   (5.248f)  // cm
+#define CENTER_TO_SHOULDER   (3.77f)  // cm
 #define EFFECTOR_TO_WRIST    (1.724f)  // cm
 
 #define CENTER_TO_FLOOR    (18.9)  // cm

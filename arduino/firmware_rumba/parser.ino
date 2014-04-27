@@ -80,10 +80,10 @@ void parser_processCommand() {
   case 57:
   case 58:
   case 59: {  // 54-59 tool offsets
-    int axis=cmd-54;
-    deltarobot_tool_offset(axis,parsenumber('X',robot.tool_offset[axis].x),
-                                parsenumber('Y',robot.tool_offset[axis].y),
-                                parsenumber('Z',robot.tool_offset[axis].z));
+    int tool_id=cmd-54;
+    deltarobot_tool_offset(tool_id,parsenumber('X',robot.tool_offset[tool_id].x),
+                                   parsenumber('Y',robot.tool_offset[tool_id].y),
+                                   parsenumber('Z',robot.tool_offset[tool_id].z));
     break;
   }
   case 90:  mode_abs=1;  break;  // absolute mode

@@ -27,7 +27,8 @@ struct Segment {
   Axis a[NUM_AXIES];
   int steps;
   int steps_left;
-  long feed_rate;
+  long feed_rate_start;
+  long feed_rate_end;
 };
 
 

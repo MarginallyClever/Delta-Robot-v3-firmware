@@ -128,8 +128,8 @@ void update_wrist_positions() {
  * Calculate the position of each elbow based on the current location of the wrists.
  */
 void update_elbows() {
-  float a,b,r1,r0,d,h;
-  Vector3 r,p1,temp,wop,w,n;
+  float a,b,c,r1,r0,d,h;
+  Vector3 r,p1,mid,wop,w,n;
   int i;
   for(i=0;i<NUM_AXIES;++i) {
     Arm &arm=robot.arms[i];
@@ -148,17 +148,17 @@ void update_elbows() {
     r1=sqrt(ELBOW_TO_WRIST*ELBOW_TO_WRIST-a*a);  // circle 1 centers on wop
     r0=SHOULDER_TO_ELBOW;  // circle 0 centers on shoulder
     d=wop.Length();
-    a = ( r0 * r0 - r1 * r1 + d*d ) / ( 2*d );
+    c = ( r0 * r0 - r1 * r1 + d*d ) / ( 2*d );
     // find the midpoint
     n=wop;
     n/=d;
-    temp=arm.shoulder+(n*a);
-    // with a and r0 we can find h, the distance from midpoint to the intersections.
-    h=sqrt(r0*r0-a*a);
+    mid = arm.shoulder+(n*c);
+    // with c and r0 we can find h, the distance from midpoint to the intersections.
+    h=sqrt(r0*r0-c*c);
     // the distance h on a line orthogonal to n and plane_normal gives us the two intersections.
     r = arm.plane_normal ^ n;
-    p1 = temp - r * h;
-    //p2 = temp + r * h;
+    p1 = mid - r * h;
+    //p2 = mid + r * h;
     
     arm.elbow.pos=p1;
   }

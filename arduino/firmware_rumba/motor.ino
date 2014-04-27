@@ -15,7 +15,7 @@
 //------------------------------------------------------------------------------
 // GLOBALS
 //------------------------------------------------------------------------------
-#ifdef VERBOSE
+#if VERBOSE > 2
 char *letter="XYZ";
 #endif
 
@@ -30,7 +30,7 @@ char *letter="XYZ";
  * @input dir which direction to step
  **/
 void motor_onestep(int motor,int dir) {
-#ifdef VERBOSE
+#if VERBOSE > 2
   Serial.print(letter[motor]);
 #endif
   digitalWrite(robot.arms[motor].motor_dir_pin,dir<0?LOW:HIGH);
@@ -40,9 +40,11 @@ void motor_onestep(int motor,int dir) {
 
 
 void outputsteps() {
+#if VERBOSE > 1
   Serial.print(F("\tSteps="));   Serial.print(robot.arms[0].new_step);
   Serial.print(F(","));   Serial.print(robot.arms[1].new_step);
   Serial.print(F(","));   Serial.println(robot.arms[2].new_step);
+#endif
 }
 
 
