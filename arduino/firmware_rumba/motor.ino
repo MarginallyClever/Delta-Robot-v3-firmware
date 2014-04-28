@@ -80,6 +80,7 @@ void motor_disable() {
 
 
 void motor_setup() {
+  // these values are from the RUMBA specification
   robot.arms[0].motor_step_pin=17;
   robot.arms[0].motor_dir_pin=16;
   robot.arms[0].motor_enable_pin=48;

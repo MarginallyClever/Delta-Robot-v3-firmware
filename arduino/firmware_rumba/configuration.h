@@ -26,8 +26,8 @@
 #define MAX_ANGLE            (90+85)
 #define MIN_ANGLE            (90-30)
 
-// related to number of instructions that can be buffered
-#define MAX_SEGMENTS         (64)
+// related to number of instructions that can be buffered.  must be a power of two > 1.
+#define MAX_SEGMENTS         (32)
 
 #define SEGMENTS_PER_CM      (1)
 #define SEGMENTS_PER_DEG     (5)
@@ -64,6 +64,13 @@
 // timer stuff
 #define CLOCK_FREQ           (16000000L)
 #define MAX_COUNTER          (65536L)
+
+
+// optimize code, please
+#define FORCE_INLINE         __attribute__((always_inline)) inline
+
+
+
 
 /**
 * This file is part of Delta Robot v8.

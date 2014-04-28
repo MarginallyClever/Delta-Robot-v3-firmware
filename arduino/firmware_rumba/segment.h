@@ -14,40 +14,47 @@
 
 
 // 32 microstepping with 400 steps per turn cannot exceed 12800.  A signed int is 32767.
-struct Axis {
+typedef struct {
   int step_count;
   int delta;
   int absdelta;
   int dir;
   int over;
-};
+} Axis;
 
 
-struct Segment {
+typedef struct {
   Axis a[NUM_AXIES];
-  int steps;
-  int steps_left;
+  int steps_total;
+  int steps_taken;
+  int accel_until;
+  int decel_after;
   long feed_rate_start;
   long feed_rate_end;
-};
-
-
-//------------------------------------------------------------------------------
-// GLOBALS
-//------------------------------------------------------------------------------
-extern Segment line_segments[MAX_SEGMENTS];
-extern volatile int current_segment;
-extern volatile int last_segment;
+} Segment;
 
 
 //------------------------------------------------------------------------------
 // METHODS
 //------------------------------------------------------------------------------
-int get_next_segment(int i);
-int get_prev_segment(int i);
 void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate);
-void motor_move_segment(Segment &seg);
-void motor_move_all_segments();
+
+
+
+
+extern Segment line_segments[MAX_SEGMENTS];
+extern Segment *working_seg;
+extern volatile int current_segment;
+extern volatile int last_segment   ;
+
+
+
+FORCE_INLINE Segment *segment_get_working() {
+  if(current_segment == last_segment ) return NULL;
+  working_seg = &line_segments[current_segment];
+  return working_seg;
+}
+
 
 
 /**

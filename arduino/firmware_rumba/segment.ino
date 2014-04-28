@@ -9,6 +9,8 @@
 //------------------------------------------------------------------------------
 // INCLUDES
 //------------------------------------------------------------------------------
+
+
 #include "configuration.h"
 #include "segment.h"
 
@@ -16,24 +18,30 @@
 //------------------------------------------------------------------------------
 // GLOBALS
 //------------------------------------------------------------------------------
+
+
 // A ring buffer of line segments.
 // @TODO: process the line segments in another thread
 // @TODO: optimize speed between line segments
 Segment line_segments[MAX_SEGMENTS];
-volatile int current_segment=0;
-volatile int last_segment=0;
+Segment *working_seg = NULL;
+volatile int current_segment  = 0;
+volatile int last_segment     = 0;
+int step_multiplier;
 
 
 //------------------------------------------------------------------------------
 // METHODS
 //------------------------------------------------------------------------------
-int get_next_segment(int i) {
-  return ( i + 1 ) % MAX_SEGMENTS;
+
+
+FORCE_INLINE int get_next_segment(int i) {
+  return ( i + 1 ) & ( MAX_SEGMENTS - 1 );
 }
 
 
-int get_prev_segment(int i) {
-  return ( i + MAX_SEGMENTS - 1 ) % MAX_SEGMENTS;
+FORCE_INLINE int get_prev_segment(int i) {
+  return ( i + MAX_SEGMENTS - 1 ) & ( MAX_SEGMENTS - 1 );
 }
 
 
@@ -44,6 +52,7 @@ void segment_setup() {
   old_seg.a[0].step_count=0;
   old_seg.a[1].step_count=0;
   old_seg.a[2].step_count=0;
+  working_seg = NULL;
 }
 
 
@@ -67,7 +76,7 @@ void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate) {
   new_seg.a[1].delta = n1 - old_seg.a[1].step_count;
   new_seg.a[2].delta = n2 - old_seg.a[2].step_count;
 
-  new_seg.steps = 0;
+  new_seg.steps_total = 0;
   new_seg.feed_rate_start =
   new_seg.feed_rate_end   = new_feed_rate;
 
@@ -76,16 +85,19 @@ void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate) {
     new_seg.a[i].over = 0;
     new_seg.a[i].dir = (new_seg.a[i].delta < 0 ? LOW:HIGH);
     new_seg.a[i].absdelta = abs(new_seg.a[i].delta);
-    if( new_seg.steps < new_seg.a[i].absdelta ) {
-      new_seg.steps = new_seg.a[i].absdelta;
+    if( new_seg.steps_total < new_seg.a[i].absdelta ) {
+      new_seg.steps_total = new_seg.a[i].absdelta;
     }
   }
 
-  if( new_seg.steps==0 ) return;
-
-  new_seg.steps_left = new_seg.steps;
+  if( new_seg.steps_total == 0 ) return;
   
-#ifdef VERBOSE > 1
+  new_seg.steps_taken = 0;
+  
+  new_seg.decel_after = 
+  new_seg.accel_until = new_seg.steps_total / 2;
+  
+#if VERBOSE > 1
   Serial.print(F("At "));  Serial.println(current_segment);
   Serial.print(F("Adding "));  Serial.println(last_segment);
   Serial.print(F("Steps= "));  Serial.println(new_seg.steps_left);
@@ -106,10 +118,20 @@ void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate) {
  * Set the clock 1 timer frequency.
  * @input desired_freq_hz the desired frequency
  */
-void timer_set_frequency(long desired_freq_hz) {
+FORCE_INLINE void timer_set_frequency(long desired_freq_hz) {
   // Source: https://github.com/MarginallyClever/ArduinoTimerInterrupt
   // Different clock sources can be selected for each timer independently. 
   // To calculate the timer frequency (for example 2Hz using timer1) you will need:
+  
+  if(desired_freq_hz > 20000 ) {
+    step_multiplier = 4;
+    desired_freq_hz >>= 2;
+  } else if(desired_freq_hz > 20000 ) {
+    step_multiplier = 2;
+    desired_freq_hz >>= 1;
+  } else {
+    step_multiplier=1;
+  }
   
   //  CPU frequency 16Mhz for Arduino
   //  maximum timer counter value (256 for 8bit, 65536 for 16bit timer)
@@ -129,7 +151,7 @@ void timer_set_frequency(long desired_freq_hz) {
   } while(counter_value > MAX_COUNTER && prescaler_index<4);
   
   if( prescaler_index>=5 ) {
-#if VERBOSE > 3
+#if VERBOSE > 1
     // if Serial.print is called from inside a timing thread it will probably crash the arduino.
     // Serial.print takesk too long, the interrupt will interrupt itself.
     Serial.println(F("Timer could not be set: Desired frequency out of bounds."));
@@ -166,50 +188,71 @@ void timer_set_frequency(long desired_freq_hz) {
   interrupts();
 }
 
+
  
 /**
  * Process all line segments in the ring buffer.  Uses bresenham's line algorithm to move all motors.
  */
-ISR(TIMER1_COMPA_vect) {   
+ISR(TIMER1_COMPA_vect) {
   // segment buffer empty? do nothing
-  if( current_segment == last_segment ) return;
-  
-  // Is this segment done?
-  if( line_segments[current_segment].steps_left <= 0 ) {
-    // Move on to next segment without wasting an interrupt tick.
-    current_segment = get_next_segment(current_segment);
-    if( current_segment == last_segment ) return;
-  }
-  
-  int j;
-  Segment &seg = line_segments[current_segment];
-  // is this a fresh new segment?
-  if( seg.steps == seg.steps_left ) {
-    // yes
-    // set the direction pins
-    for(j=0;j<NUM_AXIES;++j) {
-      digitalWrite( robot.arms[j].motor_dir_pin, line_segments[current_segment].a[j].dir );
+  if( working_seg == NULL ) {
+    working_seg = segment_get_working();
+    if( working_seg != NULL ) {
+      // New segment!
+      // set the direction pins
+      digitalWrite( robot.arms[0].motor_dir_pin, working_seg->a[0].dir );
+      digitalWrite( robot.arms[1].motor_dir_pin, working_seg->a[1].dir );
+      digitalWrite( robot.arms[2].motor_dir_pin, working_seg->a[2].dir );
+      
+      // set frequency to segment feed rate
+      timer_set_frequency(working_seg->feed_rate_start);
     }
-    // set frequency to seg.feed_rate_start
-    timer_set_frequency(seg.feed_rate_start);
-  } else {
-    // no
-    // adjust frequency towards seg.feed_rate_end
-    
   }
-
-  // make a step
-  --seg.steps_left;
-
-  // move each axis
-  for(j=0;j<NUM_AXIES;++j) {
-    Axis &a = seg.a[j];
+  
+  if( working_seg != NULL ) {
+    // move each axis
+    for(int i=0;i<step_multiplier;++i) {
+      // M0
+      Axis &a0 = working_seg->a[0];
+      a0.over += a0.absdelta;
+      if(a0.over >= working_seg->steps_total) {
+        digitalWrite(robot.arms[0].motor_step_pin,HIGH);
+        a0.over -= working_seg->steps_total;
+        digitalWrite(robot.arms[0].motor_step_pin,LOW);
+      }
+      // M1
+      Axis &a1 = working_seg->a[1];
+      a1.over += a1.absdelta;
+      if(a1.over >= working_seg->steps_total) {
+        digitalWrite(robot.arms[1].motor_step_pin,HIGH);
+        a1.over -= working_seg->steps_total;
+        digitalWrite(robot.arms[1].motor_step_pin,LOW);
+      }
+      // M2
+      Axis &a2 = working_seg->a[2];
+      a2.over += a2.absdelta;
+      if(a2.over >= working_seg->steps_total) {
+        digitalWrite(robot.arms[2].motor_step_pin,HIGH);
+        a2.over -= working_seg->steps_total;
+        digitalWrite(robot.arms[2].motor_step_pin,LOW);
+      }
+    }
     
-    a.over += a.absdelta;
-    if(a.over >= seg.steps) {
-      digitalWrite(robot.arms[j].motor_step_pin,LOW);
-      a.over -= seg.steps;
-      digitalWrite(robot.arms[j].motor_step_pin,HIGH);
+    // make a step
+    working_seg->steps_taken++;
+
+    // accel
+    if( working_seg->steps_taken <= working_seg->accel_until ) {
+//      OCR1A-=200;
+    } else if( working_seg->steps_taken > working_seg->decel_after ) {
+//      OCR1A+=200;
+    }
+
+    // Is this segment done?
+    if( working_seg->steps_taken >= working_seg->steps_total ) {
+      // Move on to next segment without wasting an interrupt tick.
+      working_seg = NULL;
+      current_segment = get_next_segment(current_segment);
     }
   }
 }
