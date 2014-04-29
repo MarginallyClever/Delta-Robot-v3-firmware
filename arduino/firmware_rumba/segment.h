@@ -30,6 +30,7 @@ typedef struct {
   int accel_until;
   int decel_after;
   long feed_rate_start;
+  long feed_rate_nominal;
   long feed_rate_end;
 } Segment;
 
@@ -48,7 +49,8 @@ extern volatile int current_segment;
 extern volatile int last_segment   ;
 
 
-
+// for reasons I don't understand... if i put this method in the .ino file i get compile errors.
+// so I put it here, which forces the externs.
 FORCE_INLINE Segment *segment_get_working() {
   if(current_segment == last_segment ) return NULL;
   working_seg = &line_segments[current_segment];

@@ -216,25 +216,25 @@ ISR(TIMER1_COMPA_vect) {
       Axis &a0 = working_seg->a[0];
       a0.over += a0.absdelta;
       if(a0.over >= working_seg->steps_total) {
-        digitalWrite(robot.arms[0].motor_step_pin,HIGH);
-        a0.over -= working_seg->steps_total;
         digitalWrite(robot.arms[0].motor_step_pin,LOW);
+        a0.over -= working_seg->steps_total;
+        digitalWrite(robot.arms[0].motor_step_pin,HIGH);
       }
       // M1
       Axis &a1 = working_seg->a[1];
       a1.over += a1.absdelta;
       if(a1.over >= working_seg->steps_total) {
-        digitalWrite(robot.arms[1].motor_step_pin,HIGH);
-        a1.over -= working_seg->steps_total;
         digitalWrite(robot.arms[1].motor_step_pin,LOW);
+        a1.over -= working_seg->steps_total;
+        digitalWrite(robot.arms[1].motor_step_pin,HIGH);
       }
       // M2
       Axis &a2 = working_seg->a[2];
       a2.over += a2.absdelta;
       if(a2.over >= working_seg->steps_total) {
-        digitalWrite(robot.arms[2].motor_step_pin,HIGH);
-        a2.over -= working_seg->steps_total;
         digitalWrite(robot.arms[2].motor_step_pin,LOW);
+        a2.over -= working_seg->steps_total;
+        digitalWrite(robot.arms[2].motor_step_pin,HIGH);
       }
     }
     

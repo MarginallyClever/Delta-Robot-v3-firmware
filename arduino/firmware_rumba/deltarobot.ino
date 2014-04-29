@@ -320,6 +320,60 @@ void deltarobot_line(float x, float y, float z,float new_feed_rate) {
 }
 
 
+
+
+
+//------------------------------------------------------------------------------
+// This method assumes the limits have already been checked.
+// This method assumes the start and end radius match.
+// This method assumes arcs are not >180 degrees (PI radians)
+// cx/cy - center of circle
+// x/y - end position
+// dir - ARC_CW or ARC_CCW to control direction of arc
+void deltarobot_arc(float cx,float cy,float x,float y,float z,float dir,float new_feed_rate) {
+  Vector3 offset_pos=deltarobot_get_end_plus_offset() ;
+  
+  // get radius
+  float dx = offset_pos.x - cx;
+  float dy = offset_pos.y - cy;
+  float radius=sqrt(dx*dx+dy*dy);
+
+  // find angle of arc (sweep)
+  float angle1=atan3(dy,dx);
+  float angle2=atan3(y-cy,x-cx);
+  float theta=angle2-angle1;
+  
+  if(dir>0 && theta<0) angle2+=2*PI;
+  else if(dir<0 && theta>0) angle1+=2*PI;
+  
+  theta=angle2-angle1;
+  
+  // get length of arc
+  // float circ=PI*2.0*radius;
+  // float len=theta*circ/(PI*2.0);
+  // simplifies to
+  float len = abs(theta) * radius;
+
+  int i, segments = floor( len / SEGMENTS_PER_CM );
+ 
+  float nx, ny, nz, angle3, scale;
+
+  for(i=0;i<segments;++i) {
+    // interpolate around the arc
+    scale = ((float)i)/((float)segments);
+    
+    angle3 = ( theta * scale ) + angle1;
+    nx = cx + cos(angle3) * radius;
+    ny = cy + sin(angle3) * radius;
+    nz = ( z - offset_pos.z ) * scale + offset_pos.z;
+    // send it to the planner
+    deltarobot_line(nx,ny,nz,new_feed_rate);
+  }
+  
+  deltarobot_line(x,y,z,new_feed_rate);
+}
+
+
 /**
  * Set the logical position
  * @input npx new position x
@@ -344,7 +398,7 @@ void deltarobot_position(float npx,float npy,float npz) {
  * print the current position, feedrate, and absolute mode.
  */
 void deltarobot_where() {
-  Vector3 offset_pos=robot.ee+robot.tool_offset[robot.current_tool];
+  Vector3 offset_pos=deltarobot_get_end_plus_offset() ;
   output("X",offset_pos.x);
   output("Y",offset_pos.y);
   output("Z",offset_pos.z);

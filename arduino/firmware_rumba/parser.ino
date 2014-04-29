@@ -72,6 +72,18 @@ void parser_processCommand() {
                        feedrate(parsenumber('F',feed_rate)) );
     break;
   }
+  case 2:
+  case 3: { // move in an arc
+    Vector3 offset=deltarobot_get_end_plus_offset();
+    deltarobot_arc(parsenumber('I',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
+                   parsenumber('J',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
+                   parsenumber('X',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
+                   parsenumber('Y',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
+                   parsenumber('Z',(mode_abs?offset.z:0)) + (mode_abs?0:offset.z),
+                   (cmd==2) ? -1 : 1,
+                   feedrate(parsenumber('F',feed_rate)) );
+    break;
+  }
   case  4:  pause(parsenumber('P',0)*1000);  break;  // dwell
   case 28:  deltarobot_find_home();  break;
   case 54:
