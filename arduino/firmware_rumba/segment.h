@@ -19,7 +19,6 @@ typedef struct {
   int delta;
   int absdelta;
   int dir;
-  int over;
 } Axis;
 
 

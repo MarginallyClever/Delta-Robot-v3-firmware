@@ -21,14 +21,28 @@
 
 
 // A ring buffer of line segments.
-// @TODO: process the line segments in another thread
-// @TODO: optimize speed between line segments
+// TODO: optimize speed between line segments
 Segment line_segments[MAX_SEGMENTS];
 Segment *working_seg = NULL;
 volatile int current_segment  = 0;
 volatile int last_segment     = 0;
 int step_multiplier;
 
+// used by timer1 to optimize interrupt inner loop
+int delta[NUM_AXIES];
+int over[NUM_AXIES];
+int steps_total;
+int steps_taken;
+int accel_until,decel_after;
+
+
+long prescalers[] = {CLOCK_FREQ /   1,
+                     CLOCK_FREQ /   8,
+                     CLOCK_FREQ /  64,
+                     CLOCK_FREQ / 256,
+                     CLOCK_FREQ /1024};
+                     
+                     
 
 //------------------------------------------------------------------------------
 // METHODS
@@ -82,7 +96,6 @@ void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate) {
 
   int i;
   for(i=0;i<NUM_AXIES;++i) {
-    new_seg.a[i].over = 0;
     new_seg.a[i].dir = (new_seg.a[i].delta < 0 ? LOW:HIGH);
     new_seg.a[i].absdelta = abs(new_seg.a[i].delta);
     if( new_seg.steps_total < new_seg.a[i].absdelta ) {
@@ -93,7 +106,6 @@ void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate) {
   if( new_seg.steps_total == 0 ) return;
   
   new_seg.steps_taken = 0;
-  
   new_seg.decel_after = 
   new_seg.accel_until = new_seg.steps_total / 2;
   
@@ -136,11 +148,6 @@ FORCE_INLINE void timer_set_frequency(long desired_freq_hz) {
   //  CPU frequency 16Mhz for Arduino
   //  maximum timer counter value (256 for 8bit, 65536 for 16bit timer)
   int prescaler_index=-1;
-  long prescalers[] = {CLOCK_FREQ /   1,
-                       CLOCK_FREQ /   8,
-                       CLOCK_FREQ /  64,
-                       CLOCK_FREQ / 256,
-                       CLOCK_FREQ /1024};
   long counter_value;
   do {
     ++prescaler_index;
@@ -189,7 +196,6 @@ FORCE_INLINE void timer_set_frequency(long desired_freq_hz) {
 }
 
 
- 
 /**
  * Process all line segments in the ring buffer.  Uses bresenham's line algorithm to move all motors.
  */
@@ -200,12 +206,22 @@ ISR(TIMER1_COMPA_vect) {
     if( working_seg != NULL ) {
       // New segment!
       // set the direction pins
-      digitalWrite( robot.arms[0].motor_dir_pin, working_seg->a[0].dir );
-      digitalWrite( robot.arms[1].motor_dir_pin, working_seg->a[1].dir );
-      digitalWrite( robot.arms[2].motor_dir_pin, working_seg->a[2].dir );
+      digitalWrite( MOTOR_0_DIR_PIN, working_seg->a[0].dir );
+      digitalWrite( MOTOR_1_DIR_PIN, working_seg->a[1].dir );
+      digitalWrite( MOTOR_2_DIR_PIN, working_seg->a[2].dir );
       
       // set frequency to segment feed rate
       timer_set_frequency(working_seg->feed_rate_start);
+      
+      // defererencing some data so the loop runs faster.
+      steps_total=working_seg->steps_total;
+      steps_taken=0;
+      delta[0] = working_seg->a[0].absdelta;
+      delta[1] = working_seg->a[1].absdelta;
+      delta[2] = working_seg->a[2].absdelta;
+      memset(over,0,sizeof(int)*NUM_AXIES);
+      accel_until=working_seg->accel_until;
+      decel_after=working_seg->decel_after;
     }
   }
   
@@ -213,43 +229,40 @@ ISR(TIMER1_COMPA_vect) {
     // move each axis
     for(int i=0;i<step_multiplier;++i) {
       // M0
-      Axis &a0 = working_seg->a[0];
-      a0.over += a0.absdelta;
-      if(a0.over >= working_seg->steps_total) {
-        digitalWrite(robot.arms[0].motor_step_pin,LOW);
-        a0.over -= working_seg->steps_total;
-        digitalWrite(robot.arms[0].motor_step_pin,HIGH);
+      over[0] += delta[0];
+      if(over[0] >= steps_total) {
+        digitalWrite(MOTOR_0_STEP_PIN,LOW);
+        over[0] -= steps_total;
+        digitalWrite(MOTOR_0_STEP_PIN,HIGH);
       }
       // M1
-      Axis &a1 = working_seg->a[1];
-      a1.over += a1.absdelta;
-      if(a1.over >= working_seg->steps_total) {
-        digitalWrite(robot.arms[1].motor_step_pin,LOW);
-        a1.over -= working_seg->steps_total;
-        digitalWrite(robot.arms[1].motor_step_pin,HIGH);
+      over[1] += delta[1];
+      if(over[1] >= steps_total) {
+        digitalWrite(MOTOR_1_STEP_PIN,LOW);
+        over[1] -= steps_total;
+        digitalWrite(MOTOR_1_STEP_PIN,HIGH);
       }
       // M2
-      Axis &a2 = working_seg->a[2];
-      a2.over += a2.absdelta;
-      if(a2.over >= working_seg->steps_total) {
-        digitalWrite(robot.arms[2].motor_step_pin,LOW);
-        a2.over -= working_seg->steps_total;
-        digitalWrite(robot.arms[2].motor_step_pin,HIGH);
+      over[2] += delta[2];
+      if(over[2] >= steps_total) {
+        digitalWrite(MOTOR_2_STEP_PIN,LOW);
+        over[2] -= steps_total;
+        digitalWrite(MOTOR_2_STEP_PIN,HIGH);
       }
     }
     
     // make a step
-    working_seg->steps_taken++;
+    steps_taken++;
 
     // accel
-    if( working_seg->steps_taken <= working_seg->accel_until ) {
+    if( steps_taken <= accel_until ) {
 //      OCR1A-=200;
-    } else if( working_seg->steps_taken > working_seg->decel_after ) {
+    } else if( steps_taken > decel_after ) {
 //      OCR1A+=200;
     }
 
     // Is this segment done?
-    if( working_seg->steps_taken >= working_seg->steps_total ) {
+    if( steps_taken >= steps_total ) {
       // Move on to next segment without wasting an interrupt tick.
       working_seg = NULL;
       current_segment = get_next_segment(current_segment);

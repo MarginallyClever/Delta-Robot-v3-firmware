@@ -71,6 +71,21 @@
 
 
 
+#define MOTOR_0_DIR_PIN  (16)
+#define MOTOR_0_STEP_PIN (17)
+#define MOTOR_1_DIR_PIN  (47)
+#define MOTOR_1_STEP_PIN (54)
+#define MOTOR_2_DIR_PIN  (56)
+#define MOTOR_2_STEP_PIN (57)
+#define MOTOR_3_DIR_PIN  (22)
+#define MOTOR_3_STEP_PIN (23)
+#define MOTOR_4_DIR_PIN  (25)
+#define MOTOR_4_STEP_PIN (26)
+#define MOTOR_5_DIR_PIN  (28)
+#define MOTOR_5_STEP_PIN (29)
+
+
+
 
 /**
 * This file is part of Delta Robot v8.
