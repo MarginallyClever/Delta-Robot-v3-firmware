@@ -331,7 +331,7 @@ void deltarobot_line(float x, float y, float z,float new_feed_rate) {
 // x/y - end position
 // dir - ARC_CW or ARC_CCW to control direction of arc
 void deltarobot_arc(float cx,float cy,float x,float y,float z,float dir,float new_feed_rate) {
-  Vector3 offset_pos=deltarobot_get_end_plus_offset() ;
+  Vector3 offset_pos=deltarobot_get_end_plus_offset();
   
   // get radius
   float dx = offset_pos.x - cx;

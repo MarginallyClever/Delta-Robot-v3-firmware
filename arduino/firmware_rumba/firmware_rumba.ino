@@ -113,7 +113,7 @@ void setup() {
  */
 void loop() {
   parser_listen();
-  //delay(1);
+  delay(1);
 }
 
 
