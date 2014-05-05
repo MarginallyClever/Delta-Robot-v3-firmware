@@ -7,6 +7,12 @@
 
 
 //------------------------------------------------------------------------------
+// INCLUDES
+//------------------------------------------------------------------------------
+#include "segment.h"
+
+
+//------------------------------------------------------------------------------
 // GLOBALS
 //------------------------------------------------------------------------------
 static char buffer[MAX_BUF];  // where we store the message until we get a ';'
@@ -85,8 +91,8 @@ void parser_processCommand() {
     break;
   }
   case  4:  {  // dwell
-    synchronize();
-    pause(parsenumber('P',0)*1000);  
+    wait_for_segment_buffer_to_empty();
+    pause(parsenumber('S',0) + parsenumber('P',0)*1000);  
     break;
   }
   case 28:  deltarobot_find_home();  break;
@@ -158,7 +164,7 @@ void parser_listen() {
     parser_processCommand();  // do something with the command
 
 #ifdef ONE_COMMAND_AT_A_TIME
-    synchronize();
+    wait_for_segment_buffer_to_empty();
 #endif
 
     parser_ready();
@@ -167,7 +173,7 @@ void parser_listen() {
 
 
 // force this thread to do nothing until all the queued segments are processed.
-void synchronize() {
+void wait_for_segment_buffer_to_empty() {
   while( current_segment != last_segment );
 }
 
