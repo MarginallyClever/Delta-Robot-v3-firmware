@@ -124,9 +124,7 @@ void parser_processCommand() {
 
   cmd = parsenumber('M',-1);
   switch(cmd) {
-  case 6:
-    deltarobot_tool_change(parsenumber('T',0));
-    break;
+  case 6:  deltarobot_tool_change(parsenumber('T',robot.current_tool));  break;
   case 17:  motor_enable();  break;
   case 18:  motor_disable();  break;
   case 100:  help();  break;
