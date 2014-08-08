@@ -18,6 +18,7 @@
 static char buffer[MAX_BUF];  // where we store the message until we get a ';'
 static int sofar;  // how much is in the buffer
 
+long line_number=0;
 
 //------------------------------------------------------------------------------
 // METHODS
@@ -67,7 +68,44 @@ void outputvector(Vector3 &v,char*name) {
  * Read the input buffer and find any recognized commands.  One G or M command per line.
  */
 void parser_processCommand() {
-  int cmd = parsenumber('G',-1);
+  // blank lines
+  if(buffer[0]==';') return;
+  
+  long cmd;
+  
+  // is there a line number?
+  cmd=parsenumber('N',-1);
+  if(cmd!=-1 && buffer[0]=='N') {  // line number must appear first on the line
+    if( cmd != line_number ) {
+      // wrong line number error
+      Serial.print(F("BADLINENUM "));
+      Serial.println(line_number);
+      return;
+    }
+  
+    // is there a checksum?
+    if(strchr(buffer,'*')!=0) {
+      // yes.  is it valid?
+      char checksum=0;
+      int c=0;
+      while(buffer[c]!='*') checksum ^= buffer[c++];
+      c++; // skip *
+      int against = strtod(buffer+c,NULL);
+      if( checksum != against ) {
+        Serial.print(F("BADCHECKSUM "));
+        Serial.println(line_number);
+        return;
+      } 
+    } else {
+      Serial.print(F("NOCHECKSUM "));
+      Serial.println(line_number);
+      return;
+    }
+    
+    line_number++;
+  }
+  
+  cmd = parsenumber('G',-1);
   switch(cmd) {
   case  0:
   case  1: {  // move in a line
@@ -128,6 +166,7 @@ void parser_processCommand() {
   case 17:  motor_enable();  break;
   case 18:  motor_disable();  break;
   case 100:  help();  break;
+  case 110:  line_number = parsenumber('N',line_number);  break;
   case 114:  deltarobot_where();  break;
   default:  break;
   }
@@ -152,20 +191,18 @@ void parser_listen() {
     char c=Serial.read();  // get it
     Serial.print(c);  // repeat it back so I know you got the message
     if(sofar<MAX_BUF) buffer[sofar++]=c;  // store it
-    if(buffer[sofar-1]==';') break;  // entire message received
-  }
-
-  if(sofar>0 && buffer[sofar-1]==';') {
-    // we got a message and it ends with a semicolon
-    buffer[sofar]=0;  // end the buffer so string functions work right
-    Serial.print(F("\r\n"));  // echo a return character for humans
-    parser_processCommand();  // do something with the command
+    if(c=='\n') {
+      buffer[sofar]=0;  // end the buffer so string functions work right
+      //Serial.print(F("\r\n"));  // echo a return character for humans
+      parser_processCommand();  // do something with the command
 
 #ifdef ONE_COMMAND_AT_A_TIME
-    wait_for_segment_buffer_to_empty();
+      wait_for_segment_buffer_to_empty();
 #endif
 
-    parser_ready();
+      parser_ready();
+      break;
+    }
   }
 }
 

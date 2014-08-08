@@ -20,8 +20,9 @@
 #define STEPS_PER_TURN       (400)  // depends on your stepper motor.  most are 200.
 #define MICROSTEPS           (16.0)
 #define MAX_FEEDRATE         (16000.0)  // depends on timer interrupt & hardware
-#define MIN_FEEDRATE         (0.01)
-#define DEFAULT_FEEDRATE     (500)
+#define MIN_FEEDRATE         (1)
+#define DEFAULT_FEEDRATE     (4000)
+#define ACCELERATION         (200)
 
 #define MAX_ANGLE            (90+85)
 #define MIN_ANGLE            (90-30)
@@ -29,8 +30,8 @@
 // related to number of instructions that can be buffered.  must be a power of two > 1.
 #define MAX_SEGMENTS         (32)
 
-#define SEGMENTS_PER_CM      (1)
-#define SEGMENTS_PER_DEG     (5)
+#define SEGMENTS_PER_CM      (2.0)
+#define SEGMENTS_PER_DEG     (5.0)
 
 // turn this on if you need the robot to NOT buffer commands
 //#define ONE_COMMAND_AT_A_TIME  (1)
@@ -70,22 +71,31 @@
 #define FORCE_INLINE         __attribute__((always_inline)) inline
 
 
+#define MOTHERBOARD 1 // RUMBA
+//#define MOTHERBOARD 2 // RAMPS
 
-#define MOTOR_0_DIR_PIN  (16)
-#define MOTOR_0_STEP_PIN (17)
-#define MOTOR_1_DIR_PIN  (47)
-#define MOTOR_1_STEP_PIN (54)
-#define MOTOR_2_DIR_PIN  (56)
-#define MOTOR_2_STEP_PIN (57)
-#define MOTOR_3_DIR_PIN  (22)
-#define MOTOR_3_STEP_PIN (23)
-#define MOTOR_4_DIR_PIN  (25)
-#define MOTOR_4_STEP_PIN (26)
-#define MOTOR_5_DIR_PIN  (28)
-#define MOTOR_5_STEP_PIN (29)
+#if MOTHERBOARD == 1
+#define MOTOR_0_DIR_PIN    (16)
+#define MOTOR_0_STEP_PIN   (17)
+#define MOTOR_0_ENABLE_PIN (48)
+
+#define MOTOR_1_DIR_PIN    (47)
+#define MOTOR_1_STEP_PIN   (54)
+#define MOTOR_1_ENABLE_PIN (55)
+
+#define MOTOR_2_DIR_PIN    (56)
+#define MOTOR_2_STEP_PIN   (57)
+#define MOTOR_2_ENABLE_PIN (62)
+#endif
+
+#if MOTHERBOARD == 2
+#endif
 
 
-
+#ifndef CRITICAL_SECTION_START
+  #define CRITICAL_SECTION_START  unsigned char _sreg = SREG;  cli();
+  #define CRITICAL_SECTION_END    SREG = _sreg;
+#endif //CRITICAL_SECTION_START
 
 /**
 * This file is part of Delta Robot v8.

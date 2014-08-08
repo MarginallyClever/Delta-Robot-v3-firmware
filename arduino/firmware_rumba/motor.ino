@@ -80,18 +80,18 @@ void motor_disable() {
 
 
 void motor_setup() {
-  // these values are from the RUMBA specification
-  robot.arms[0].motor_step_pin=17;
-  robot.arms[0].motor_dir_pin=16;
-  robot.arms[0].motor_enable_pin=48;
+  // these values are from the RUMBA specification  
+  robot.arms[0].motor_step_pin   = MOTOR_0_STEP_PIN;
+  robot.arms[0].motor_dir_pin    = MOTOR_0_DIR_PIN;
+  robot.arms[0].motor_enable_pin = MOTOR_0_ENABLE_PIN;
 
-  robot.arms[1].motor_step_pin=54;
-  robot.arms[1].motor_dir_pin=47;
-  robot.arms[1].motor_enable_pin=55;
+  robot.arms[1].motor_step_pin   = MOTOR_1_STEP_PIN;
+  robot.arms[1].motor_dir_pin    = MOTOR_1_DIR_PIN;
+  robot.arms[1].motor_enable_pin = MOTOR_1_ENABLE_PIN;
 
-  robot.arms[2].motor_step_pin=57;
-  robot.arms[2].motor_dir_pin=56;
-  robot.arms[2].motor_enable_pin=62;
+  robot.arms[2].motor_step_pin   = MOTOR_2_STEP_PIN;
+  robot.arms[2].motor_dir_pin    = MOTOR_2_DIR_PIN;
+  robot.arms[2].motor_enable_pin = MOTOR_2_ENABLE_PIN;
   
   for(int i=0;i<NUM_AXIES;++i) {  
     // set the motor pin & scale

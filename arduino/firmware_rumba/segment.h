@@ -19,6 +19,7 @@ typedef struct {
   int delta;
   int absdelta;
   int dir;
+  float delta_normalized;
 } Axis;
 
 
@@ -28,24 +29,26 @@ typedef struct {
   int steps_taken;
   int accel_until;
   int decel_after;
-  long feed_rate_start;
-  long feed_rate_nominal;
-  long feed_rate_end;
+  float feed_rate_max;
+  float feed_rate_start;
+  float feed_rate_start_max;
+  float feed_rate_end;  
 } Segment;
 
 
 //------------------------------------------------------------------------------
 // METHODS
 //------------------------------------------------------------------------------
-void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate);
-
-
+extern void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate);
+extern void segment_update_trapezoid(Segment *s,float start_speed,float end_speed);
+extern void recalculate_reverse2(Segment *prev,Segment *current,Segment *next);
+extern void recalculate_forward2(Segment *prev,Segment *current,Segment *next);
 
 
 extern Segment line_segments[MAX_SEGMENTS];
 extern Segment *working_seg;
 extern volatile int current_segment;
-extern volatile int last_segment   ;
+extern volatile int last_segment;
 
 
 // for reasons I don't understand... if i put this method in the .ino file i get compile errors.

@@ -280,8 +280,15 @@ void deltarobot_line(float x, float y, float z,float new_feed_rate) {
   Vector3 dp = destination - start;  // far do we have to go? 
 
   // we need some variables in the loop.  Declaring them outside the loop can be more efficient.
-  
-  int total_steps = ceil(dp.Length() / SEGMENTS_PER_CM );
+  int total_steps = ceil(dp.Length() * (float)SEGMENTS_PER_CM );
+  /*
+    Serial.print("LENGTH=");
+    Serial.println(dp.Length());
+    Serial.print("STEP/CM=");
+    Serial.println(SEGMENTS_PER_CM);
+    */
+    Serial.print("Steps=");
+    Serial.println(total_steps);
   int i;
   float f;
   // until the interpolation finishes...
@@ -290,7 +297,8 @@ void deltarobot_line(float x, float y, float z,float new_feed_rate) {
     // this is linear interpolation
     f = (float)i / (float)total_steps;
     robot.ee = dp * f + start;
-/*
+
+#if VERBOSE > 0
     Serial.print(i);
     Serial.print('=');
     Serial.print(robot.ee.x);
@@ -298,7 +306,7 @@ void deltarobot_line(float x, float y, float z,float new_feed_rate) {
     Serial.print(robot.ee.y);
     Serial.print(',');
     Serial.print(robot.ee.z);
-*/
+#endif
     //deltarobot_where();
 
     // update the inverse kinematics
@@ -354,7 +362,7 @@ void deltarobot_arc(float cx,float cy,float x,float y,float z,float dir,float ne
   // simplifies to
   float len = abs(theta) * radius;
 
-  int i, segments = floor( len / SEGMENTS_PER_CM );
+  int i, segments = floor( len * SEGMENTS_PER_CM );
  
   float nx, ny, nz, angle3, scale;
 
