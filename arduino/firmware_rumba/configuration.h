@@ -20,9 +20,9 @@
 #define STEPS_PER_TURN       (400)  // depends on your stepper motor.  most are 200.
 #define MICROSTEPS           (16.0)
 #define MAX_FEEDRATE         (16000.0)  // depends on timer interrupt & hardware
-#define MIN_FEEDRATE         (1)
-#define DEFAULT_FEEDRATE     (4000)
-#define ACCELERATION         (200)
+#define MIN_FEEDRATE         (0.1)
+#define DEFAULT_FEEDRATE     (3000.0)
+#define ACCELERATION         (150)
 
 #define MAX_ANGLE            (90+85)
 #define MIN_ANGLE            (90-30)
