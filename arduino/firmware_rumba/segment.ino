@@ -80,18 +80,17 @@ void recalculate_reverse2(Segment *prev,Segment *current,Segment *next) {
   if(current==NULL) return;
   if(next==NULL) return;
   
-  //if (current->feed_rate_start != current->feed_rate_start_max)
-  {
+  if (current->feed_rate_start != current->feed_rate_start_max) {
     // If nominal length true, max junction speed is guaranteed to be reached. Only compute
     // for max allowable speed if block is decelerating and nominal length is false.
-    if (/*(!current->nominal_length_flag) &&*/ (current->feed_rate_start_max > next->feed_rate_start)) {
+    if ((!current->nominal_length_flag) && (current->feed_rate_start_max > next->feed_rate_start)) {
       float v = min( current->feed_rate_start_max,
-                                      max_speed_allowed(-ACCELERATION,next->feed_rate_start,current->steps_total));
+                                      max_speed_allowed(-acceleration,next->feed_rate_start,current->steps_total));
       current->feed_rate_start = v;
     } else {
       current->feed_rate_start = current->feed_rate_start_max;
     }
-    //current->recalculate_flag = true;
+    current->recalculate_flag = true;
   }
 }
 
@@ -117,16 +116,15 @@ void recalculate_forward2(Segment *prev,Segment *current,Segment *next) {
   // full speed change within the block, we need to adjust the entry speed accordingly. Entry
   // speeds have already been reset, maximized, and reverse planned by reverse planner.
   // If nominal length is true, max junction speed is guaranteed to be reached. No need to recheck.
-  //if (!prev->nominal_length_flag)
-  {
+  if (!prev->nominal_length_flag) {
     if (prev->feed_rate_start < current->feed_rate_start) {
       double feed_rate_start = min( current->feed_rate_start,
-                                    max_speed_allowed(-ACCELERATION,prev->feed_rate_start,prev->steps_total) );
+                                    max_speed_allowed(-acceleration,prev->feed_rate_start,prev->steps_total) );
 
       // Check for junction speed change
       if (current->feed_rate_start != feed_rate_start) {
         current->feed_rate_start = feed_rate_start;
-        //current->recalculate_flag = true;
+        current->recalculate_flag = true;
       }
     }
   }
@@ -148,16 +146,23 @@ void recalculate_forward() {
 }
 
 
+int intersection_time(float acceleration,float distance,float start_speed,float end_speed) {
+//  return ( ( 2.0*acceleration*s->steps_total - start_speed*start_speed + end_speed*end_speed ) / (4.0*acceleration) );
+  float t2 = ( start_speed - end_speed + acceleration * distance ) / ( 2.0 * acceleration );
+  return ceil( distance - t2 );
+}
+
+
 void segment_update_trapezoid(Segment *s,float start_speed,float end_speed) {
-  //int steps_to_accel =  ceil( (s->feed_rate_max*s->feed_rate_max - start_speed*start_speed )/ (2.0*ACCELERATION) );
-  //int steps_to_decel = floor( (end_speed*end_speed - s->feed_rate_max*s->feed_rate_max )/ -(2.0*ACCELERATION) );
-  int steps_to_accel =  ceil( ( s->feed_rate_max - start_speed ) / ACCELERATION );
-  int steps_to_decel = floor( ( end_speed - s->feed_rate_max ) / -ACCELERATION );
+  //int steps_to_accel =  ceil( (s->feed_rate_max*s->feed_rate_max - start_speed*start_speed )/ (2.0*acceleration) );
+  //int steps_to_decel = floor( (end_speed*end_speed - s->feed_rate_max*s->feed_rate_max )/ -(2.0*acceleration) );
+  int steps_to_accel =  ceil( ( s->feed_rate_max - start_speed ) / acceleration );
+  int steps_to_decel = floor( ( end_speed - s->feed_rate_max ) / -acceleration );
 
   int steps_at_top_speed = s->steps_total - steps_to_accel - steps_to_decel;
 
   if(steps_at_top_speed<=0) {
-    steps_to_accel = ( ( 2.0*ACCELERATION*s->steps_total - start_speed*start_speed + end_speed*end_speed ) / (4.0*ACCELERATION) );
+    steps_to_accel = intersection_time(acceleration,s->steps_total,start_speed,end_speed);
     steps_at_top_speed=0;
   }
   
@@ -180,11 +185,11 @@ void recalculate_trapezoids() {
     next = &line_segments[s];
     if (current) {
       // Recalculate if current block entry or exit junction speed has changed.
-      //if (current->recalculate_flag || next->recalculate_flag)
+      if (current->recalculate_flag || next->recalculate_flag)
       {
         // NOTE: Entry and exit factors always > 0 by all previous logic operations.
         segment_update_trapezoid(current,current->feed_rate_start, next->feed_rate_start);
-        //current->recalculate_flag = false; // Reset current only to ensure next trapezoid is computed
+        current->recalculate_flag = false; // Reset current only to ensure next trapezoid is computed
       }
     }
     s=get_next_segment(s);
@@ -192,7 +197,7 @@ void recalculate_trapezoids() {
   // Last/newest block in buffer. Make sure the last block always ends motion.
   if(next != NULL) {
     segment_update_trapezoid(next, next->feed_rate_start, MIN_FEEDRATE);
-    //next->recalculate_flag = false;
+    next->recalculate_flag = false;
   }
 }
 
@@ -212,7 +217,7 @@ void recalculate_acceleration() {
     Serial.print(F("\t"));   Serial.print(next->feed_rate_max);
     Serial.print(F("\tS"));  Serial.print(next->feed_rate_start);
     Serial.print(F("\tE"));  Serial.print(next->feed_rate_end);
-    Serial.print(F("\t"));   Serial.print(ACCELERATION);
+    Serial.print(F("\t"));   Serial.print(acceleration);
     Serial.print(F("\t*"));  Serial.print(next->steps_total);
     Serial.print(F("\tA"));  Serial.print(next->accel_until);
     Serial.print(F("\tT"));  Serial.print( max(0,next->steps_total - next->accel_until - next->decel_after) );
@@ -307,11 +312,14 @@ void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate) {
       }
     }
 
-  float b = max_speed_allowed(-ACCELERATION, MIN_FEEDRATE, new_seg.steps_total);
+  float allowable_speed = max_speed_allowed(-acceleration, MIN_FEEDRATE, new_seg.steps_total);
   //Serial.print("max = ");  Serial.println(feed_rate_start_max);
-//  Serial.print("allowed = ");  Serial.println(b);
+//  Serial.print("allowed = ");  Serial.println(allowable_speed);
   new_seg.feed_rate_start_max = feed_rate_start_max;
-  new_seg.feed_rate_start = min(feed_rate_start_max, b );
+  new_seg.feed_rate_start = min(feed_rate_start_max, allowable_speed );
+
+  new_seg.nominal_length_flag = ( allowable_speed <= new_seg.feed_rate_max );
+  new_seg.recalculate_flag = true;
   
   // when should we accelerate and decelerate in this segment? 
   segment_update_trapezoid(&new_seg,new_seg.feed_rate_start,MIN_FEEDRATE);
@@ -461,9 +469,9 @@ ISR(TIMER1_COMPA_vect) {
     // accel
     float nfr=current_feed_rate;
     if( steps_taken <= accel_until ) {
-      nfr+=ACCELERATION;
+      nfr+=acceleration;
     } else if( steps_taken > decel_after ) {
-      nfr-=ACCELERATION;
+      nfr-=acceleration;
     }
     
     if(nfr!=current_feed_rate) {

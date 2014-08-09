@@ -16,7 +16,8 @@
 //------------------------------------------------------------------------------
 // GLOBALS
 //------------------------------------------------------------------------------
-float feed_rate=40;  // how fast the EE moves in cm/s
+float feed_rate=DEFAULT_FEEDRATE;  // how fast the EE moves in cm/s
+float acceleration=DEFAULT_ACCELERATION;
 
 // did you put it together backwards?
 int reverse=0;

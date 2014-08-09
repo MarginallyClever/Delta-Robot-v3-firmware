@@ -32,7 +32,9 @@ typedef struct {
   float feed_rate_max;
   float feed_rate_start;
   float feed_rate_start_max;
-  float feed_rate_end;  
+  float feed_rate_end;
+  int nominal_length_flag;
+  int recalculate_flag;
 } Segment;
 
 
@@ -49,6 +51,7 @@ extern Segment line_segments[MAX_SEGMENTS];
 extern Segment *working_seg;
 extern volatile int current_segment;
 extern volatile int last_segment;
+extern float acceleration;
 
 
 // for reasons I don't understand... if i put this method in the .ino file i get compile errors.

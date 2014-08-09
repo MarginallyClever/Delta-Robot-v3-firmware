@@ -286,9 +286,9 @@ void deltarobot_line(float x, float y, float z,float new_feed_rate) {
     Serial.println(dp.Length());
     Serial.print("STEP/CM=");
     Serial.println(SEGMENTS_PER_CM);
-    */
     Serial.print("Steps=");
     Serial.println(total_steps);
+    */
   int i;
   float f;
   // until the interpolation finishes...

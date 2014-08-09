@@ -21,8 +21,8 @@
 #define MICROSTEPS           (16.0)
 #define MAX_FEEDRATE         (16000.0)  // depends on timer interrupt & hardware
 #define MIN_FEEDRATE         (0.1)
-#define DEFAULT_FEEDRATE     (3000.0)
-#define ACCELERATION         (150)
+#define DEFAULT_FEEDRATE     (4000.0)
+#define DEFAULT_ACCELERATION (80)
 
 #define MAX_ANGLE            (90+85)
 #define MIN_ANGLE            (90-30)

@@ -109,6 +109,7 @@ void parser_processCommand() {
   switch(cmd) {
   case  0:
   case  1: {  // move in a line
+      acceleration = min(max(parsenumber('A',acceleration),1),2000);
       Vector3 offset=deltarobot_get_end_plus_offset();
       deltarobot_line( parsenumber('X',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
                        parsenumber('Y',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
@@ -118,6 +119,7 @@ void parser_processCommand() {
   }
   case 2:
   case 3: { // move in an arc
+    acceleration = min(max(parsenumber('A',acceleration),1),2000);
     Vector3 offset=deltarobot_get_end_plus_offset();
     deltarobot_arc(parsenumber('I',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
                    parsenumber('J',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
