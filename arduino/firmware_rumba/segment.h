@@ -33,8 +33,9 @@ typedef struct {
   float feed_rate_start;
   float feed_rate_start_max;
   float feed_rate_end;
-  int nominal_length_flag;
-  int recalculate_flag;
+  char nominal_length_flag;
+  char recalculate_flag;
+  char busy;
 } Segment;
 
 
@@ -59,6 +60,7 @@ extern float acceleration;
 FORCE_INLINE Segment *segment_get_working() {
   if(current_segment == last_segment ) return NULL;
   working_seg = &line_segments[current_segment];
+  working_seg->busy=true;
   return working_seg;
 }
 

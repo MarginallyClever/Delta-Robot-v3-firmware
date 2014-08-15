@@ -22,7 +22,7 @@
 #define MAX_FEEDRATE         (16000.0)  // depends on timer interrupt & hardware
 #define MIN_FEEDRATE         (0.1)
 #define DEFAULT_FEEDRATE     (4000.0)
-#define DEFAULT_ACCELERATION (80)
+#define DEFAULT_ACCELERATION (8)
 
 #define MAX_ANGLE            (90+85)
 #define MIN_ANGLE            (90-30)
@@ -30,7 +30,7 @@
 // related to number of instructions that can be buffered.  must be a power of two > 1.
 #define MAX_SEGMENTS         (32)
 
-#define SEGMENTS_PER_CM      (2.0)
+#define SEGMENTS_PER_CM      (5.0)
 #define SEGMENTS_PER_DEG     (5.0)
 
 // turn this on if you need the robot to NOT buffer commands

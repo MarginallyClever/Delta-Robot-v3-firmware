@@ -147,9 +147,12 @@ void recalculate_forward() {
 
 
 int intersection_time(float acceleration,float distance,float start_speed,float end_speed) {
-//  return ( ( 2.0*acceleration*s->steps_total - start_speed*start_speed + end_speed*end_speed ) / (4.0*acceleration) );
+#if 0
+  return ( ( 2.0*acceleration*distance - start_speed*start_speed + end_speed*end_speed ) / (4.0*acceleration) );
+#else
   float t2 = ( start_speed - end_speed + acceleration * distance ) / ( 2.0 * acceleration );
-  return ceil( distance - t2 );
+  return distance - t2;
+#endif
 }
 
 
@@ -162,15 +165,26 @@ void segment_update_trapezoid(Segment *s,float start_speed,float end_speed) {
   int steps_at_top_speed = s->steps_total - steps_to_accel - steps_to_decel;
 
   if(steps_at_top_speed<=0) {
-    steps_to_accel = intersection_time(acceleration,s->steps_total,start_speed,end_speed);
+    steps_to_accel = ceil( intersection_time(acceleration,s->steps_total,start_speed,end_speed) );
     steps_at_top_speed=0;
+    steps_to_accel = max(steps_to_accel,0);
+    steps_to_accel = min(steps_to_accel,s->steps_total);
   }
-  
+/*
+  Serial.print("M");  Serial.println(s->feed_rate_max);
+  Serial.print("E");  Serial.println(end_speed);
+  Serial.print("S");  Serial.println(start_speed);
+  Serial.print("@");  Serial.println(acceleration);
+  Serial.print("A");  Serial.println(steps_to_accel);
+  Serial.print("D");  Serial.println(steps_to_decel);
+*/
 CRITICAL_SECTION_START
-  s->accel_until = steps_to_accel;
-  s->decel_after = steps_to_accel+steps_at_top_speed;
-  s->feed_rate_start = start_speed;
-  s->feed_rate_end = end_speed;
+  if(s->busy==false) {
+    s->accel_until = steps_to_accel;
+    s->decel_after = steps_to_accel+steps_at_top_speed;
+    s->feed_rate_start = start_speed;
+    s->feed_rate_end = end_speed;
+  }
 CRITICAL_SECTION_END
 }
 
@@ -208,43 +222,26 @@ void recalculate_acceleration() {
   recalculate_trapezoids();
 
 #if VERBOSE > 1
-  Serial.println("-------");
+  //Serial.println("\nstart max,max,start,end,rate,total,up steps,cruise,down steps,nominal?");
+  Serial.println("---------------");
   int s = current_segment;
+  
   while(s != last_segment) {
     Segment *next = &line_segments[s];
     s=get_next_segment(s);
-    Serial.print(next->feed_rate_start_max);
-    Serial.print(F("\t"));   Serial.print(next->feed_rate_max);
+//                             Serial.print(next->feed_rate_start_max);
+//    Serial.print(F("\t"));   Serial.print(next->feed_rate_max);
+//    Serial.print(F("\t"));   Serial.print(acceleration);
     Serial.print(F("\tS"));  Serial.print(next->feed_rate_start);
-    Serial.print(F("\tE"));  Serial.print(next->feed_rate_end);
-    Serial.print(F("\t"));   Serial.print(acceleration);
+//    Serial.print(F("\tE"));  Serial.print(next->feed_rate_end);
     Serial.print(F("\t*"));  Serial.print(next->steps_total);
     Serial.print(F("\tA"));  Serial.print(next->accel_until);
-    Serial.print(F("\tT"));  Serial.print( max(0,next->steps_total - next->accel_until - next->decel_after) );
-    Serial.print(F("\tD"));  Serial.println(next->steps_total - next->decel_after);  
+    int after = (next->steps_total - next->decel_after);
+    int total = next->steps_total - after - next->accel_until;
+    Serial.print(F("\tT"));  Serial.print(total);
+    Serial.print(F("\tD"));  Serial.print(after);
+    Serial.print(F("\t"));   Serial.println(next->nominal_length_flag==1?'*':' ');
   }
-#endif
-}
-
-
-void report(Segment &new_seg) {
-#if VERBOSE > 1
-  Serial.print(F("At "));  Serial.println(current_segment);
-  Serial.print(F("Adding "));  Serial.println(last_segment);
-  Serial.print(F("Steps= "));  Serial.println(new_seg.steps_total);
-  Serial.print(F("d0= "));  Serial.println(new_seg.a[0].delta);
-  Serial.print(F("d1= "));  Serial.println(new_seg.a[1].delta);
-  Serial.print(F("d2= "));  Serial.println(new_seg.a[2].delta);
-  Serial.print(F("dn0= "));  Serial.println(new_seg.a[0].delta_normalized);
-  Serial.print(F("dn1= "));  Serial.println(new_seg.a[1].delta_normalized);
-  Serial.print(F("dn2= "));  Serial.println(new_seg.a[2].delta_normalized);
-
-  Serial.print(F("accel_until= "));  Serial.println(new_seg.accel_until);
-  Serial.print(F("decel_after= "));  Serial.println(new_seg.decel_after);
-  Serial.print(F("feed_rate_max= "));  Serial.println(new_seg.feed_rate_max);
-  Serial.print(F("feed_rate_start= "));  Serial.println(new_seg.feed_rate_start);
-  Serial.print(F("feed_rate_start_max= "));  Serial.println(new_seg.feed_rate_start_max);
-  Serial.print(F("feed_rate_end= "));  Serial.println(new_seg.feed_rate_end);
 #endif
 }
 
@@ -279,7 +276,7 @@ void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate) {
   for(i=0;i<NUM_AXIES;++i) {
     new_seg.a[i].dir = (new_seg.a[i].delta < 0 ? LOW:HIGH);
     new_seg.a[i].absdelta = abs(new_seg.a[i].delta);
-    len += new_seg.a[i].absdelta * new_seg.a[i].absdelta ;
+    len += new_seg.a[i].absdelta * new_seg.a[i].absdelta;
     if( new_seg.steps_total < new_seg.a[i].absdelta ) {
       new_seg.steps_total = new_seg.a[i].absdelta;
     }
@@ -316,15 +313,14 @@ void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate) {
   //Serial.print("max = ");  Serial.println(feed_rate_start_max);
 //  Serial.print("allowed = ");  Serial.println(allowable_speed);
   new_seg.feed_rate_start_max = feed_rate_start_max;
-  new_seg.feed_rate_start = min(feed_rate_start_max, allowable_speed );
+  new_seg.feed_rate_start = min(feed_rate_start_max, allowable_speed);
 
-  new_seg.nominal_length_flag = ( allowable_speed <= new_seg.feed_rate_max );
+  new_seg.nominal_length_flag = ( allowable_speed >= new_seg.feed_rate_max );
   new_seg.recalculate_flag = true;
+  new_seg.busy=false;
   
   // when should we accelerate and decelerate in this segment? 
   segment_update_trapezoid(&new_seg,new_seg.feed_rate_start,MIN_FEEDRATE);
-
-  //report(new_seg);
 
   if( current_segment==last_segment ) {
     timer_set_frequency(new_feed_rate);
@@ -469,9 +465,9 @@ ISR(TIMER1_COMPA_vect) {
     // accel
     float nfr=current_feed_rate;
     if( steps_taken <= accel_until ) {
-      nfr+=acceleration;
-    } else if( steps_taken > decel_after ) {
       nfr-=acceleration;
+    } else if( steps_taken > decel_after ) {
+      nfr+=acceleration;
     }
     
     if(nfr!=current_feed_rate) {

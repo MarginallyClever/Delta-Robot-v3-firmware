@@ -411,6 +411,7 @@ void deltarobot_where() {
   output("Y",offset_pos.y);
   output("Z",offset_pos.z);
   output("F",feed_rate);
+  output("A",acceleration);
   Serial.println(mode_abs?"ABS":"REL");
   outputsteps();
 } 
