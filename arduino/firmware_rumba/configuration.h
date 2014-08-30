@@ -17,12 +17,12 @@
 #define BAUD                 (57600)  // How fast is the Arduino talking?
 #define MAX_BUF              (64)  // What is the longest message Arduino can store?
 
-#define STEPS_PER_TURN       (400)  // depends on your stepper motor.  most are 200.
-#define MICROSTEPS           (16.0)
-#define MAX_FEEDRATE         (16000.0)  // depends on timer interrupt & hardware
-#define MIN_FEEDRATE         (0.1)
-#define DEFAULT_FEEDRATE     (4000.0)
-#define DEFAULT_ACCELERATION (8)
+#define MICROSTEPS           (16.0)  // microstepping on this microcontroller
+#define STEPS_PER_TURN       (400.0)  // default number of steps per turn * microsteps
+#define MAX_FEEDRATE         (40000.0)  // depends on timer interrupt & hardware
+#define MIN_FEEDRATE         (1500)
+#define DEFAULT_FEEDRATE     (8000.0)
+#define DEFAULT_ACCELERATION (20)
 
 #define MAX_ANGLE            (90+85)
 #define MIN_ANGLE            (90-30)
@@ -30,8 +30,7 @@
 // related to number of instructions that can be buffered.  must be a power of two > 1.
 #define MAX_SEGMENTS         (32)
 
-#define SEGMENTS_PER_CM      (5.0)
-#define SEGMENTS_PER_DEG     (5.0)
+#define MM_PER_SEGMENT       (3)  // Arcs are split into many line segments.  How long are the segments?
 
 // turn this on if you need the robot to NOT buffer commands
 //#define ONE_COMMAND_AT_A_TIME  (1)

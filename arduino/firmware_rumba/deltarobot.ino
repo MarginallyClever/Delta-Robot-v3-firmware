@@ -221,9 +221,9 @@ void deltarobot_find_home() {
   motor_disable();
 
   // The arms are 24 degrees from straight horizontal when they hit the switch.
-  // @TODO: This could be better customized in firmware.
+  // @TODO: This could be better customized (per-arm).
   float horizontal = 24;
-  long j, steps_to_zero = MICROSTEPS_PER_TURN * horizontal / 360.00;
+  long j, steps_to_zero = horizontal * MICROSTEP_PER_DEGREE;
 
   for(i=0;i<NUM_AXIES;++i) {
     // enable one motor at a time
@@ -280,7 +280,7 @@ void deltarobot_line(float x, float y, float z,float new_feed_rate) {
   Vector3 dp = destination - start;  // far do we have to go? 
 
   // we need some variables in the loop.  Declaring them outside the loop can be more efficient.
-  int total_steps = ceil(dp.Length() * (float)SEGMENTS_PER_CM );
+  int total_steps = ceil(dp.Length() * (float)MM_PER_SEGMENT );
   /*
     Serial.print("LENGTH=");
     Serial.println(dp.Length());
@@ -362,7 +362,7 @@ void deltarobot_arc(float cx,float cy,float x,float y,float z,float dir,float ne
   // simplifies to
   float len = abs(theta) * radius;
 
-  int i, segments = floor( len * SEGMENTS_PER_CM );
+  int i, segments = floor( len * MM_PER_SEGMENT );
  
   float nx, ny, nz, angle3, scale;
 

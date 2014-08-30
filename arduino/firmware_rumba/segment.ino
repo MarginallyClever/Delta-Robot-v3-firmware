@@ -35,13 +35,14 @@ int steps_total;
 int steps_taken;
 int accel_until,decel_after;
 long current_feed_rate;
-
+long old_feed_rate=0;
+/*
 long prescalers[] = {CLOCK_FREQ /   1,
                      CLOCK_FREQ /   8,
                      CLOCK_FREQ /  64,
                      CLOCK_FREQ / 256,
                      CLOCK_FREQ /1024};
-                     
+*/
                      
 
 //------------------------------------------------------------------------------
@@ -85,7 +86,7 @@ void recalculate_reverse2(Segment *prev,Segment *current,Segment *next) {
     // for max allowable speed if block is decelerating and nominal length is false.
     if ((!current->nominal_length_flag) && (current->feed_rate_start_max > next->feed_rate_start)) {
       float v = min( current->feed_rate_start_max,
-                                      max_speed_allowed(-acceleration,next->feed_rate_start,current->steps_total));
+                     max_speed_allowed(-acceleration,next->feed_rate_start,current->steps_total));
       current->feed_rate_start = v;
     } else {
       current->feed_rate_start = current->feed_rate_start_max;
@@ -157,6 +158,9 @@ int intersection_time(float acceleration,float distance,float start_speed,float 
 
 
 void segment_update_trapezoid(Segment *s,float start_speed,float end_speed) {
+  if(start_speed<MIN_FEEDRATE) start_speed=MIN_FEEDRATE;
+  if(end_speed<MIN_FEEDRATE) end_speed=MIN_FEEDRATE;
+  
   //int steps_to_accel =  ceil( (s->feed_rate_max*s->feed_rate_max - start_speed*start_speed )/ (2.0*acceleration) );
   //int steps_to_decel = floor( (end_speed*end_speed - s->feed_rate_max*s->feed_rate_max )/ -(2.0*acceleration) );
   int steps_to_accel =  ceil( ( s->feed_rate_max - start_speed ) / acceleration );
@@ -247,6 +251,131 @@ void recalculate_acceleration() {
 
 
 /**
+ * Set the clock 1 timer frequency.
+ * @input desired_freq_hz the desired frequency
+ */
+FORCE_INLINE void timer_set_frequency(long desired_freq_hz) {
+  if( desired_freq_hz > MAX_FEEDRATE ) desired_freq_hz = MAX_FEEDRATE;
+  if( desired_freq_hz < MIN_FEEDRATE ) desired_freq_hz = MIN_FEEDRATE;
+  if( old_feed_rate == desired_freq_hz ) return;
+  old_feed_rate = desired_freq_hz;
+  
+  // Source: https://github.com/MarginallyClever/ArduinoTimerInterrupt
+  // Different clock sources can be selected for each timer independently. 
+  // To calculate the timer frequency (for example 2Hz using timer1) you will need:
+  
+  if(desired_freq_hz > 20000 ) {
+    step_multiplier = 4;
+    desired_freq_hz >>= 2;
+  } else if(desired_freq_hz > 10000 ) {
+    step_multiplier = 2;
+    desired_freq_hz >>= 1;
+  } else {
+    step_multiplier=1;
+  }
+
+  long counter_value = ( CLOCK_FREQ / 8 ) / desired_freq_hz;
+  if( counter_value >= MAX_COUNTER ) {
+    //Serial.print("this breaks the timer and crashes the arduino");
+    //Serial.flush();
+    counter_value = MAX_COUNTER - 1;
+  } else if( counter_value < 100 ) {
+    counter_value = 100;
+  }
+
+  OCR1A = counter_value;
+}
+
+
+/**
+ * Process all line segments in the ring buffer.  Uses bresenham's line algorithm to move all motors.
+ */
+ISR(TIMER1_COMPA_vect) {
+  // segment buffer empty? do nothing
+  if( working_seg == NULL ) {
+    working_seg = segment_get_working();
+    if( working_seg != NULL ) {
+      // New segment!
+      // set the direction pins
+      digitalWrite( MOTOR_0_DIR_PIN, working_seg->a[0].dir );
+      digitalWrite( MOTOR_1_DIR_PIN, working_seg->a[1].dir );
+      digitalWrite( MOTOR_2_DIR_PIN, working_seg->a[2].dir );
+      
+      // set frequency to segment feed rate
+      timer_set_frequency(working_seg->feed_rate_start);
+      current_feed_rate = working_seg->feed_rate_start;
+      
+      // defererencing some data so the loop runs faster.
+      steps_total=working_seg->steps_total;
+      steps_taken=0;
+      delta[0] = working_seg->a[0].absdelta;
+      delta[1] = working_seg->a[1].absdelta;
+      delta[2] = working_seg->a[2].absdelta;
+      memset(over,0,sizeof(int)*NUM_AXIES);
+      accel_until=working_seg->accel_until;
+      decel_after=working_seg->decel_after;
+      return;
+    } else {
+      OCR1A = 2000; // wait 1ms
+      return;
+    }
+  }
+  
+  if( working_seg != NULL ) {
+    // move each axis
+    for(int i=0;i<step_multiplier;++i) {
+      // M0
+      over[0] += delta[0];
+      if(over[0] >= steps_total) {
+        digitalWrite(MOTOR_0_STEP_PIN,LOW);
+        over[0] -= steps_total;
+        digitalWrite(MOTOR_0_STEP_PIN,HIGH);
+      }
+      // M1
+      over[1] += delta[1];
+      if(over[1] >= steps_total) {
+        digitalWrite(MOTOR_1_STEP_PIN,LOW);
+        over[1] -= steps_total;
+        digitalWrite(MOTOR_1_STEP_PIN,HIGH);
+      }
+      // M2
+      over[2] += delta[2];
+      if(over[2] >= steps_total) {
+        digitalWrite(MOTOR_2_STEP_PIN,LOW);
+        over[2] -= steps_total;
+        digitalWrite(MOTOR_2_STEP_PIN,HIGH);
+      }
+    }
+    
+    // make a step
+    steps_taken++;
+
+    // accel
+    float nfr=current_feed_rate;
+    if( steps_taken <= accel_until ) {
+      nfr-=acceleration;
+      if(nfr<MIN_FEEDRATE) nfr = MIN_FEEDRATE;
+    } else if( steps_taken > decel_after ) {
+      nfr+=acceleration;
+      if(nfr>MAX_FEEDRATE) nfr = MAX_FEEDRATE;
+    }
+    
+    if(nfr!=current_feed_rate) {
+      current_feed_rate=nfr;
+      timer_set_frequency(current_feed_rate);
+    }      
+
+    // Is this segment done?
+    if( steps_taken >= steps_total ) {
+      // Move on to next segment without wasting an interrupt tick.
+      working_seg = NULL;
+      current_segment = get_next_segment(current_segment);
+    }
+  }
+}
+
+
+/**
  * Add a segment to the line buffer when there is room.
  */
 void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate) {
@@ -268,9 +397,9 @@ void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate) {
   new_seg.a[1].delta = n1 - old_seg.a[1].step_count;
   new_seg.a[2].delta = n2 - old_seg.a[2].step_count;
   new_seg.feed_rate_max = new_feed_rate;
-  new_seg.steps_total = 0;
 
   // the axis that has the most steps will control the overall acceleration
+  new_seg.steps_total = 0;
   float len = 0;
   int i;
   for(i=0;i<NUM_AXIES;++i) {
@@ -322,166 +451,9 @@ void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate) {
   // when should we accelerate and decelerate in this segment? 
   segment_update_trapezoid(&new_seg,new_seg.feed_rate_start,MIN_FEEDRATE);
 
-  if( current_segment==last_segment ) {
-    timer_set_frequency(new_feed_rate);
-  }
-  
   last_segment = next_segment;
-  
+
   recalculate_acceleration();
-}
-
-
-
-/**
- * Set the clock 1 timer frequency.
- * @input desired_freq_hz the desired frequency
- */
-FORCE_INLINE void timer_set_frequency(long desired_freq_hz) {
-  // Source: https://github.com/MarginallyClever/ArduinoTimerInterrupt
-  // Different clock sources can be selected for each timer independently. 
-  // To calculate the timer frequency (for example 2Hz using timer1) you will need:
-  
-  if(desired_freq_hz > 20000 ) {
-    step_multiplier = 4;
-    desired_freq_hz >>= 2;
-  } else if(desired_freq_hz > 20000 ) {
-    step_multiplier = 2;
-    desired_freq_hz >>= 1;
-  } else {
-    step_multiplier=1;
-  }
-  
-  //  CPU frequency 16Mhz for Arduino
-  //  maximum timer counter value (256 for 8bit, 65536 for 16bit timer)
-  int prescaler_index=-1;
-  long counter_value;
-  do {
-    ++prescaler_index;
-    //  Divide CPU frequency through the choosen prescaler (16000000 / 256 = 62500)
-    //  Divide result through the desired frequency (62500 / 2Hz = 31250)
-    counter_value = prescalers[prescaler_index] / desired_freq_hz;
-    //  Verify counter_value < maximum timer. if fail, choose bigger prescaler.
-  } while(counter_value > MAX_COUNTER && prescaler_index<4);
-  
-  if( prescaler_index>=5 ) {
-#if VERBOSE > 1
-    // if Serial.print is called from inside a timing thread it will probably crash the arduino.
-    // Serial.print takesk too long, the interrupt will interrupt itself.
-    Serial.println(F("Timer could not be set: Desired frequency out of bounds."));
-#endif
-    return;
-  }
-  
-#if VERBOSE > 4
-  Serial.print("freq=");
-  Serial.print(desired_freq_hz);
-#endif
-
-  prescaler_index++;
-
-  // disable global interrupts
-  noInterrupts();
-  // set entire TCCR1A register to 0
-  TCCR1A = 0;
-  // set entire TCCR1B register to 0
-  TCCR1B = 0;
-  // set the overflow clock to 0
-  TCNT1  = 0;
-  // set compare match register to desired timer count
-  OCR1A = counter_value;
-  // turn on CTC mode
-  TCCR1B |= (1 << WGM12);
-  // Set CS10, CS11, and CS12 bits for prescaler
-  TCCR1B |= ( (( prescaler_index&0x1 )   ) << CS10);
-  TCCR1B |= ( (( prescaler_index&0x2 )>>1) << CS11);
-  TCCR1B |= ( (( prescaler_index&0x4 )>>2) << CS12);
-  // enable timer compare interrupt
-  TIMSK1 |= (1 << OCIE1A);
-  // enable global interrupts
-  interrupts();
-}
-
-
-/**
- * Process all line segments in the ring buffer.  Uses bresenham's line algorithm to move all motors.
- */
-ISR(TIMER1_COMPA_vect) {
-  // segment buffer empty? do nothing
-  if( working_seg == NULL ) {
-    working_seg = segment_get_working();
-    if( working_seg != NULL ) {
-      // New segment!
-      // set the direction pins
-      digitalWrite( MOTOR_0_DIR_PIN, working_seg->a[0].dir );
-      digitalWrite( MOTOR_1_DIR_PIN, working_seg->a[1].dir );
-      digitalWrite( MOTOR_2_DIR_PIN, working_seg->a[2].dir );
-      
-      // set frequency to segment feed rate
-      timer_set_frequency(working_seg->feed_rate_start);
-      current_feed_rate = working_seg->feed_rate_start;
-      
-      // defererencing some data so the loop runs faster.
-      steps_total=working_seg->steps_total;
-      steps_taken=0;
-      delta[0] = working_seg->a[0].absdelta;
-      delta[1] = working_seg->a[1].absdelta;
-      delta[2] = working_seg->a[2].absdelta;
-      memset(over,0,sizeof(int)*NUM_AXIES);
-      accel_until=working_seg->accel_until;
-      decel_after=working_seg->decel_after;
-    }
-  }
-  
-  if( working_seg != NULL ) {
-    // move each axis
-    for(int i=0;i<step_multiplier;++i) {
-      // M0
-      over[0] += delta[0];
-      if(over[0] >= steps_total) {
-        digitalWrite(MOTOR_0_STEP_PIN,LOW);
-        over[0] -= steps_total;
-        digitalWrite(MOTOR_0_STEP_PIN,HIGH);
-      }
-      // M1
-      over[1] += delta[1];
-      if(over[1] >= steps_total) {
-        digitalWrite(MOTOR_1_STEP_PIN,LOW);
-        over[1] -= steps_total;
-        digitalWrite(MOTOR_1_STEP_PIN,HIGH);
-      }
-      // M2
-      over[2] += delta[2];
-      if(over[2] >= steps_total) {
-        digitalWrite(MOTOR_2_STEP_PIN,LOW);
-        over[2] -= steps_total;
-        digitalWrite(MOTOR_2_STEP_PIN,HIGH);
-      }
-    }
-    
-    // make a step
-    steps_taken++;
-
-    // accel
-    float nfr=current_feed_rate;
-    if( steps_taken <= accel_until ) {
-      nfr-=acceleration;
-    } else if( steps_taken > decel_after ) {
-      nfr+=acceleration;
-    }
-    
-    if(nfr!=current_feed_rate) {
-      current_feed_rate=nfr;
-      timer_set_frequency(current_feed_rate);
-    }      
-
-    // Is this segment done?
-    if( steps_taken >= steps_total ) {
-      // Move on to next segment without wasting an interrupt tick.
-      working_seg = NULL;
-      current_segment = get_next_segment(current_segment);
-    }
-  }
 }
 
 

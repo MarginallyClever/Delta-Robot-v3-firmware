@@ -105,7 +105,22 @@ void motor_setup() {
     digitalWrite(robot.arms[i].limit_switch_pin,HIGH);
   }
   
-  pinMode(13,OUTPUT);
+  // disable global interrupts
+  noInterrupts();
+  // set entire TCCR1A register to 0
+  TCCR1A = 0;
+  // set the overflow clock to 0
+  TCNT1  = 0;
+  // set compare match register to desired timer count
+  OCR1A = 2000;  // 1ms
+  // turn on CTC mode
+  TCCR1B = (1 << WGM12);
+  // Set 8x prescaler
+  TCCR1B |= ( 1 << CS11 );
+  // enable timer compare interrupt
+  TIMSK1 |= (1 << OCIE1A);
+  
+  interrupts();  // enable global interrupts
 }
 
 
