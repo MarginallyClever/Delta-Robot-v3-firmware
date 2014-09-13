@@ -9,8 +9,6 @@
 //------------------------------------------------------------------------------
 // INCLUDES
 //------------------------------------------------------------------------------
-
-
 #include "configuration.h"
 #include "segment.h"
 
@@ -18,10 +16,7 @@
 //------------------------------------------------------------------------------
 // GLOBALS
 //------------------------------------------------------------------------------
-
-
 // A ring buffer of line segments.
-// TODO: optimize speed between line segments
 Segment line_segments[MAX_SEGMENTS];
 Segment *working_seg = NULL;
 volatile int current_segment  = 0;
@@ -36,18 +31,25 @@ int steps_taken;
 int accel_until,decel_after;
 long current_feed_rate;
 long old_feed_rate=0;
-/*
-long prescalers[] = {CLOCK_FREQ /   1,
-                     CLOCK_FREQ /   8,
-                     CLOCK_FREQ /  64,
-                     CLOCK_FREQ / 256,
-                     CLOCK_FREQ /1024};
-*/
                      
 
 //------------------------------------------------------------------------------
 // METHODS
 //------------------------------------------------------------------------------
+
+// force this thread to do nothing until all the queued segments are processed.
+void wait_for_segment_buffer_to_empty() {
+  while( current_segment != last_segment );
+}
+
+
+/**
+ * @return 1 if buffer is full, 0 if it is not.
+ */
+char segment_buffer_full() {
+  int next_segment = get_next_segment(last_segment);
+  return (next_segment == current_segment);
+}
 
 
 FORCE_INLINE int get_next_segment(int i) {
@@ -74,6 +76,23 @@ void segment_setup() {
   old_seg.a[1].step_count=0;
   old_seg.a[2].step_count=0;
   working_seg = NULL;
+  
+  // disable global interrupts
+  noInterrupts();
+  // set entire TCCR1A register to 0
+  TCCR1A = 0;
+  // set the overflow clock to 0
+  TCNT1  = 0;
+  // set compare match register to desired timer count
+  OCR1A = 2000;  // 1ms
+  // turn on CTC mode
+  TCCR1B = (1 << WGM12);
+  // Set 8x prescaler
+  TCCR1B |= ( 1 << CS11 );
+  // enable timer compare interrupt
+  TIMSK1 |= (1 << OCIE1A);
+  
+  interrupts();  // enable global interrupts
 }
 
 

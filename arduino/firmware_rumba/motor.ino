@@ -7,12 +7,6 @@
 
 
 //------------------------------------------------------------------------------
-// INCLUDES
-//------------------------------------------------------------------------------
-#include "configuration.h"
-
-
-//------------------------------------------------------------------------------
 // GLOBALS
 //------------------------------------------------------------------------------
 #if VERBOSE > 2
@@ -39,7 +33,10 @@ void motor_onestep(int motor,int dir) {
 }
 
 
-void outputsteps() {
+/**
+ * print the current motor positions in steps
+ */
+void motor_where() {
 #if VERBOSE > 1
   Serial.print(F("\tSteps="));   Serial.print(robot.arms[0].new_step);
   Serial.print(F(","));   Serial.print(robot.arms[1].new_step);
@@ -84,43 +81,43 @@ void motor_setup() {
   robot.arms[0].motor_step_pin   = MOTOR_0_STEP_PIN;
   robot.arms[0].motor_dir_pin    = MOTOR_0_DIR_PIN;
   robot.arms[0].motor_enable_pin = MOTOR_0_ENABLE_PIN;
+  robot.arms[0].limit_switch_pin = MOTOR_0_LIMIT_PIN;
 
   robot.arms[1].motor_step_pin   = MOTOR_1_STEP_PIN;
   robot.arms[1].motor_dir_pin    = MOTOR_1_DIR_PIN;
   robot.arms[1].motor_enable_pin = MOTOR_1_ENABLE_PIN;
+  robot.arms[1].limit_switch_pin = MOTOR_1_LIMIT_PIN;
 
   robot.arms[2].motor_step_pin   = MOTOR_2_STEP_PIN;
   robot.arms[2].motor_dir_pin    = MOTOR_2_DIR_PIN;
   robot.arms[2].motor_enable_pin = MOTOR_2_ENABLE_PIN;
+  robot.arms[2].limit_switch_pin = MOTOR_2_LIMIT_PIN;
   
-  for(int i=0;i<NUM_AXIES;++i) {  
+  for(int i=0;i<NUM_AXIES;++i) {
     // set the motor pin & scale
     pinMode(robot.arms[i].motor_step_pin,OUTPUT);
     pinMode(robot.arms[i].motor_dir_pin,OUTPUT);
     pinMode(robot.arms[i].motor_enable_pin,OUTPUT);
     // set the limit switches
-    robot.arms[i].limit_switch_pin=37-i; 
     robot.arms[i].limit_switch_state=HIGH;
     pinMode(robot.arms[i].limit_switch_pin,INPUT);
     digitalWrite(robot.arms[i].limit_switch_pin,HIGH);
   }
-  
-  // disable global interrupts
-  noInterrupts();
-  // set entire TCCR1A register to 0
-  TCCR1A = 0;
-  // set the overflow clock to 0
-  TCNT1  = 0;
-  // set compare match register to desired timer count
-  OCR1A = 2000;  // 1ms
-  // turn on CTC mode
-  TCCR1B = (1 << WGM12);
-  // Set 8x prescaler
-  TCCR1B |= ( 1 << CS11 );
-  // enable timer compare interrupt
-  TIMSK1 |= (1 << OCIE1A);
-  
-  interrupts();  // enable global interrupts
+}
+
+
+void motor_set_step_count(long a0,long a1,long a2) {  
+  if( current_segment==last_segment ) {
+    Segment &old_seg = line_segments[get_prev_segment(last_segment)];
+    old_seg.a[0].step_count=a0;
+    old_seg.a[1].step_count=a1;
+    old_seg.a[2].step_count=a2;
+/*
+    laststep[0]=a0;
+    laststep[1]=a1;
+    laststep[2]=a2;
+*/
+  }
 }
 
 

@@ -13,88 +13,116 @@
 //------------------------------------------------------------------------------
 #define VERBOSE              (0)  // increasing number increases output
 
-#define VERSION              (1)  // firmware version
+#define EEPROM_VERSION       (1)  // firmware version
+
 #define BAUD                 (57600)  // How fast is the Arduino talking?
 #define MAX_BUF              (64)  // What is the longest message Arduino can store?
 
-#define MICROSTEPS           (16.0)  // microstepping on this microcontroller
 #define STEPS_PER_TURN       (400.0)  // default number of steps per turn * microsteps
+#define MICROSTEPS           (16.0)  // microstepping on this microcontroller
+
 #define MAX_FEEDRATE         (40000.0)  // depends on timer interrupt & hardware
-#define MIN_FEEDRATE         (1500)
+#define MIN_FEEDRATE         (500)
 #define DEFAULT_FEEDRATE     (8000.0)
-#define DEFAULT_ACCELERATION (20)
+#define DEFAULT_ACCELERATION (10)
 
 #define MAX_ANGLE            (90+85)
 #define MIN_ANGLE            (90-30)
 
 // related to number of instructions that can be buffered.  must be a power of two > 1.
 #define MAX_SEGMENTS         (32)
-
-#define MM_PER_SEGMENT       (3)  // Arcs are split into many line segments.  How long are the segments?
+// split long lines into pieces to make them more correct.
+#define MM_PER_SEGMENT       (3)
+#define NUM_TOOLS            (6)
 
 // turn this on if you need the robot to NOT buffer commands
 //#define ONE_COMMAND_AT_A_TIME  (1)
-
-// ** Nothing below this line needs to be configured **
-
-#define NUM_AXIES            (3)
-#define NUM_TOOLS            (6)
 
 #define TWOPI                (PI*2.0)
 #define DEG2RAD              (PI/180.0)
 #define RAD2DEG              (180.0/PI)
 
 #define MICROSTEPS_PER_TURN  (STEPS_PER_TURN*MICROSTEPS)
-#define CIRCUMFERENCE        (BICEP_LENGTH*TWOPI)
-#define MICROSTEP_DISTANCE   (CIRCUMFERENCE/MICROSTEPS_PER_TURN)  // distance elbow moves in a single microstep
 #define MICROSTEP_PER_DEGREE (MICROSTEPS_PER_TURN/360.0)
 
 
-
-#define SHOULDER_TO_ELBOW    (5)  // cm
-#define ELBOW_TO_WRIST       (16.5f)  // cm
-
-//#define CENTER_TO_SHOULDER   (5.248f)  // cm
-#define CENTER_TO_SHOULDER   (3.77f)  // cm
-#define EFFECTOR_TO_WRIST    (1.724f)  // cm
-
-#define CENTER_TO_FLOOR    (18.9)  // cm
-
-
+// time passed with no instruction?  Make sure PC knows we are waiting.
+#define TIMEOUT_OK           (1000)
 // timer stuff
 #define CLOCK_FREQ           (16000000L)
 #define MAX_COUNTER          (65536L)
-
-
 // optimize code, please
 #define FORCE_INLINE         __attribute__((always_inline)) inline
-
-
-#define MOTHERBOARD 1 // RUMBA
-//#define MOTHERBOARD 2 // RAMPS
-
-#if MOTHERBOARD == 1
-#define MOTOR_0_DIR_PIN    (16)
-#define MOTOR_0_STEP_PIN   (17)
-#define MOTOR_0_ENABLE_PIN (48)
-
-#define MOTOR_1_DIR_PIN    (47)
-#define MOTOR_1_STEP_PIN   (54)
-#define MOTOR_1_ENABLE_PIN (55)
-
-#define MOTOR_2_DIR_PIN    (56)
-#define MOTOR_2_STEP_PIN   (57)
-#define MOTOR_2_ENABLE_PIN (62)
-#endif
-
-#if MOTHERBOARD == 2
-#endif
 
 
 #ifndef CRITICAL_SECTION_START
   #define CRITICAL_SECTION_START  unsigned char _sreg = SREG;  cli();
   #define CRITICAL_SECTION_END    SREG = _sreg;
 #endif //CRITICAL_SECTION_START
+
+
+
+// arduino pins for motor control
+#define MOTHERBOARD 1  // RUMBA
+//#define MOTHERBOARD 2  // RAMPS 1.4
+
+#if MOTHERBOARD == 1  // RUMBA
+#define NUM_AXIES          (3)  // can go up to 6
+
+
+#define MOTOR_0_DIR_PIN    (16)
+#define MOTOR_0_STEP_PIN   (17)
+#define MOTOR_0_ENABLE_PIN (48)
+#define MOTOR_0_LIMIT_PIN  (37)
+
+#define MOTOR_1_DIR_PIN    (47)
+#define MOTOR_1_STEP_PIN   (54)
+#define MOTOR_1_ENABLE_PIN (55)
+#define MOTOR_1_LIMIT_PIN  (36)
+
+#define MOTOR_2_DIR_PIN    (56)
+#define MOTOR_2_STEP_PIN   (57)
+#define MOTOR_2_ENABLE_PIN (62)
+#define MOTOR_2_LIMIT_PIN  (35)
+
+#define MOTOR_3_DIR_PIN    (22)
+#define MOTOR_3_STEP_PIN   (23)
+#define MOTOR_3_ENABLE_PIN (27)
+#define MOTOR_3_LIMIT_PIN  (34)
+
+#define MOTOR_4_DIR_PIN    (25)
+#define MOTOR_4_STEP_PIN   (26)
+#define MOTOR_4_ENABLE_PIN (24)
+#define MOTOR_4_LIMIT_PIN  (33)
+
+#define MOTOR_5_DIR_PIN    (28)
+#define MOTOR_5_STEP_PIN   (29)
+#define MOTOR_5_ENABLE_PIN (39)
+#define MOTOR_5_LIMIT_PIN  (32)
+#endif
+
+#if MOTHERBOARD == 2  // RAMPS 1.4
+#define NUM_AXIES          (3)  // can go up to 4.
+
+#define MOTOR_0_DIR_PIN    (55)
+#define MOTOR_0_STEP_PIN   (54)
+#define MOTOR_0_ENABLE_PIN (38)
+#define MOTOR_0_LIMIT_PIN  (3)
+
+#define MOTOR_1_DIR_PIN    (61)
+#define MOTOR_1_STEP_PIN   (60)
+#define MOTOR_1_ENABLE_PIN (56)
+#define MOTOR_1_LIMIT_PIN  (14)
+
+#define MOTOR_2_DIR_PIN    (48)
+#define MOTOR_2_STEP_PIN   (46)
+#define MOTOR_2_ENABLE_PIN (62)
+#define MOTOR_2_LIMIT_PIN  (18)
+
+#define MOTOR_3_DIR_PIN    (28)
+#define MOTOR_3_STEP_PIN   (26)
+#define MOTOR_3_ENABLE_PIN (24)
+#endif
 
 /**
 * This file is part of Delta Robot v8.

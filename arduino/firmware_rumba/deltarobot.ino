@@ -10,10 +10,8 @@
 // INCLUDES
 //------------------------------------------------------------------------------
 #include "configuration.h"
-#include "Vector3.h"
-#include "Joint.h"
-#include "Arm.h"
-#include "DeltaRobot.h"
+#include "vector3.h"
+#include "deltarobot.h"
 
 
 //------------------------------------------------------------------------------
@@ -57,7 +55,6 @@ void deltarobot_setup() {
     a.wrist.relative=Vector3(cos((float)i*frac)*EFFECTOR_TO_WRIST,
                              sin((float)i*frac)*EFFECTOR_TO_WRIST,
                              0);
-    a.last_step=0;
     a.new_step=0;
   }
 
@@ -70,9 +67,33 @@ void deltarobot_setup() {
   robot.ee.z = robot.arms[0].shoulder.z - bb;
   
   robot.current_tool=0;
+
+  robot_position(0,0,robot.ee.z);
+}
+
+
+/**
+ * Set the logical position
+ * @input npx new position x
+ * @input npy new position y
+ */
+void robot_position(float npx,float npy,float npz) {
+  wait_for_segment_buffer_to_empty();
   
+  // get the EE position
+  robot.ee = Vector3(npx,npy,npz)-robot.tool_offset[robot.current_tool];
+  // update kinematics (find angles)
   update_ik();
-  segment_setup();
+  // Update the segment positions to match the new virtual position or they will go crazy
+  // on the next robot_line().  Without this G92 is unpredictable.
+  Segment &old_seg = line_segments[get_prev_segment(last_segment)];
+  int i;
+  for(i=0;i<NUM_AXIES;++i) {
+    old_seg.a[i].step_count = 
+    robot.arms[i].new_step = robot.arms[i].angle * MICROSTEP_PER_DEGREE;
+  }
+  // output new position
+  motor_where();
 }
 
 
@@ -209,13 +230,29 @@ void update_shoulder_angles() {
   */
     arm.angle=nx;
   }
+
+#if VERBOSE > 0
+  Serial.print(i);
+  Serial.print('=');
+  Serial.print(robot.ee.x);
+  Serial.print(',');
+  Serial.print(robot.ee.y);
+  Serial.print(',');
+  Serial.print(robot.ee.z);
+  Serial.print(',');
+  Serial.print(robot.arms[0].angle);
+  Serial.print(',');
+  Serial.print(robot.arms[1].angle);
+  Serial.print(',');
+  Serial.println(robot.arms[2].angle);
+#endif
 }
 
 
 /**
  * Touch all limit switches and then home the pen holder.  Could also use the Rostock method of touching the bed to model the surface.
  */
-void deltarobot_find_home() {
+void robot_find_home() {
   char i;
 
   motor_disable();
@@ -255,7 +292,7 @@ void deltarobot_find_home() {
  * @param destination y coordinate
  * @param destination z coordinate
  */
-void deltarobot_line(float x, float y, float z,float new_feed_rate) {
+void robot_line(float x, float y, float z,float new_feed_rate) {
   x-=robot.tool_offset[robot.current_tool].x;
   y-=robot.tool_offset[robot.current_tool].y;
   z-=robot.tool_offset[robot.current_tool].z;
@@ -264,62 +301,25 @@ void deltarobot_line(float x, float y, float z,float new_feed_rate) {
     Serial.println(F("Destination out of bounds."));
     return;
   }
-/*
-  Serial.print(F("pos="));
-  Serial.print(x);
-  Serial.print(',');
-  Serial.print(y);
-  Serial.print(',');
-  Serial.print(z);
-  Serial.print(',');
-  Serial.println(new_feed_rate);
-*/ 
-  // how long does it take to reach destination at speed feed_rate?
+
   Vector3 destination(x,y,z);
   Vector3 start = robot.ee;  // keep a copy of start for later in this method
   Vector3 dp = destination - start;  // far do we have to go? 
 
   // we need some variables in the loop.  Declaring them outside the loop can be more efficient.
-  int total_steps = ceil(dp.Length() * (float)MM_PER_SEGMENT );
-  /*
-    Serial.print("LENGTH=");
-    Serial.println(dp.Length());
-    Serial.print("STEP/CM=");
-    Serial.println(SEGMENTS_PER_CM);
-    Serial.print("Steps=");
-    Serial.println(total_steps);
-    */
+  int pieces = ceil(dp.Length() * (float)MM_PER_SEGMENT );
+
   int i;
   float f;
   // until the interpolation finishes...
-  for(i=1;i<=total_steps;++i) {
+  for(i=1;i<=pieces;++i) {
     // find the point between destination and start that we've reached.
     // this is linear interpolation
-    f = (float)i / (float)total_steps;
+    f = (float)i / (float)pieces;
     robot.ee = dp * f + start;
 
-#if VERBOSE > 0
-    Serial.print(i);
-    Serial.print('=');
-    Serial.print(robot.ee.x);
-    Serial.print(',');
-    Serial.print(robot.ee.y);
-    Serial.print(',');
-    Serial.print(robot.ee.z);
-#endif
-    //deltarobot_where();
-
-    // update the inverse kinematics
     update_ik();
-/*
-    Serial.print(i);
-    Serial.print('=');
-    Serial.print(robot.arms[0].angle);
-    Serial.print(',');
-    Serial.print(robot.arms[1].angle);
-    Serial.print(',');
-    Serial.println(robot.arms[2].angle);
-*/
+    
     motor_segment(robot.arms[0].angle,
                   robot.arms[1].angle,
                   robot.arms[2].angle,
@@ -338,8 +338,8 @@ void deltarobot_line(float x, float y, float z,float new_feed_rate) {
 // cx/cy - center of circle
 // x/y - end position
 // dir - ARC_CW or ARC_CCW to control direction of arc
-void deltarobot_arc(float cx,float cy,float x,float y,float z,float dir,float new_feed_rate) {
-  Vector3 offset_pos=deltarobot_get_end_plus_offset();
+void robot_arc(float cx,float cy,float x,float y,float z,float dir,float new_feed_rate) {
+  Vector3 offset_pos = robot_get_end_plus_offset();
   
   // get radius
   float dx = offset_pos.x - cx;
@@ -366,7 +366,7 @@ void deltarobot_arc(float cx,float cy,float x,float y,float z,float dir,float ne
  
   float nx, ny, nz, angle3, scale;
 
-  for(i=0;i<segments;++i) {
+  for(i=1;i<=segments;++i) {
     // interpolate around the arc
     scale = ((float)i)/((float)segments);
     
@@ -375,45 +375,23 @@ void deltarobot_arc(float cx,float cy,float x,float y,float z,float dir,float ne
     ny = cy + sin(angle3) * radius;
     nz = ( z - offset_pos.z ) * scale + offset_pos.z;
     // send it to the planner
-    deltarobot_line(nx,ny,nz,new_feed_rate);
+    robot_line(nx,ny,nz,new_feed_rate);
   }
-  
-  deltarobot_line(x,y,z,new_feed_rate);
-}
-
-
-/**
- * Set the logical position
- * @input npx new position x
- * @input npy new position y
- */
-void deltarobot_position(float npx,float npy,float npz) {
-  // here is a good place to add sanity tests
-  
-  robot.ee = Vector3(npx,npy,npz)-robot.tool_offset[robot.current_tool];
-  
-  update_ik();
-  
-  robot.arms[0].last_step = robot.arms[0].angle * MICROSTEP_PER_DEGREE;
-  robot.arms[1].last_step = robot.arms[1].angle * MICROSTEP_PER_DEGREE;
-  robot.arms[2].last_step = robot.arms[2].angle * MICROSTEP_PER_DEGREE;
-  
-  outputsteps();
 }
 
 
 /**
  * print the current position, feedrate, and absolute mode.
  */
-void deltarobot_where() {
-  Vector3 offset_pos=deltarobot_get_end_plus_offset() ;
+void robot_where() {
+  Vector3 offset_pos = robot_get_end_plus_offset() ;
   output("X",offset_pos.x);
   output("Y",offset_pos.y);
   output("Z",offset_pos.z);
   output("F",feed_rate);
   output("A",acceleration);
   Serial.println(mode_abs?"ABS":"REL");
-  outputsteps();
+  motor_where();
 } 
 
 
@@ -447,20 +425,20 @@ char deltarobot_read_switches() {
 }
 
 
-void deltarobot_tool_offset(int axis,float x,float y,float z) {
+void robot_tool_offset(int axis,float x,float y,float z) {
   robot.tool_offset[axis].x=x;
   robot.tool_offset[axis].y=y;
   robot.tool_offset[axis].z=z;
 }
 
-Vector3 deltarobot_get_end_plus_offset() {
+Vector3 robot_get_end_plus_offset() {
   return Vector3(robot.tool_offset[robot.current_tool].x + robot.ee.x,
                  robot.tool_offset[robot.current_tool].y + robot.ee.y,
                  robot.tool_offset[robot.current_tool].z + robot.ee.z);
 }
 
 
-void deltarobot_tool_change(int tool_id) {
+void robot_tool_change(int tool_id) {
   if(tool_id < 0) tool_id=0;
   if(tool_id > NUM_TOOLS) tool_id=NUM_TOOLS;
   robot.current_tool=tool_id;

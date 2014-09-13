@@ -14,16 +14,16 @@
 
 
 // 32 microstepping with 400 steps per turn cannot exceed 12800.  A signed int is 32767.
-typedef struct {
+struct Axis {
   int step_count;
-  int delta;
   int absdelta;
+  int delta;
   int dir;
   float delta_normalized;
-} Axis;
+};
 
 
-typedef struct {
+struct Segment {
   Axis a[NUM_AXIES];
   int steps_total;
   int steps_taken;
@@ -36,7 +36,7 @@ typedef struct {
   char nominal_length_flag;
   char recalculate_flag;
   char busy;
-} Segment;
+};
 
 
 //------------------------------------------------------------------------------

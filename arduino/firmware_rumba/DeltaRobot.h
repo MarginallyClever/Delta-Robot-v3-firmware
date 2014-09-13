@@ -8,8 +8,64 @@
 // please see http://www.github.com/MarginallyClever/DeltaRobotv8 for more information.
 
 
-#include "Arm.h"
-#include "Joint.h"
+#include "vector3.h"
+#include <Servo.h>
+
+
+
+//------------------------------------------------------------------------------
+// CONSTANTS
+//------------------------------------------------------------------------------
+
+// physical measurements of the machine
+#define SHOULDER_TO_ELBOW    (5)  // cm
+#define ELBOW_TO_WRIST       (16.5f)  // cm
+
+//#define CENTER_TO_SHOULDER   (5.248f)  // cm
+#define CENTER_TO_SHOULDER   (3.77f)  // cm
+#define EFFECTOR_TO_WRIST    (1.724f)  // cm
+
+#define CENTER_TO_FLOOR      (18.9)  // cm
+
+
+
+//------------------------------------------------------------------------------
+// STRUCTS
+//------------------------------------------------------------------------------
+
+
+struct Joint {
+  Vector3 pos;
+  Vector3 relative;
+};
+
+
+struct Arm {
+  Vector3 shoulder;
+  Joint elbow;
+  Joint wrist;
+  Joint wop;
+  
+  float angle;
+
+  // for motors
+  int new_step;
+  
+  int delta;
+  int absdelta;
+  int dir;
+  int over;
+
+  Vector3 plane_ortho;
+  Vector3 plane_normal;
+
+  // for limit switches
+  int motor_step_pin;
+  int motor_dir_pin;
+  int motor_enable_pin;
+  int limit_switch_pin;
+  int limit_switch_state;  
+};
 
 
 struct DeltaRobot {

@@ -9,7 +9,7 @@
 //------------------------------------------------------------------------------
 // INCLUDES
 //------------------------------------------------------------------------------
-#include "Vector3.h"
+#include "vector3.h"
 #include "configuration.h"
 #include "segment.h"
 
@@ -80,7 +80,7 @@ float feedrate(float nfr) {
  */
 void help() {
   Serial.print(F("Delta Robot v8-"));
-  Serial.println(VERSION);
+  Serial.println(EEPROM_VERSION);
   Serial.println(F("Please see http://www.github.com/MarginallyClever/DeltaRobotv8 for more information."));
   Serial.println(F("Commands:"));
   Serial.println(F("M17/M18; - enable/disable motors"));
@@ -97,12 +97,12 @@ void setup() {
   Serial.begin(BAUD);  // open coms
 
   motor_setup();
+  segment_setup();
 
   deltarobot_setup();
-  deltarobot_position(0,0,0);
+  feedrate(DEFAULT_FEEDRATE);  // set default speed
   
   help();  // say hello
-  feedrate(DEFAULT_FEEDRATE);  // set default speed
   parser_ready();
 }
 
@@ -114,7 +114,6 @@ void setup() {
  */
 void loop() {
   parser_listen();
-  delay(1);
 }
 
 
