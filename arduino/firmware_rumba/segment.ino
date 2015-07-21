@@ -21,16 +21,19 @@ Segment line_segments[MAX_SEGMENTS];
 Segment *working_seg = NULL;
 volatile int current_segment  = 0;
 volatile int last_segment     = 0;
-int step_multiplier;
+int step_multiplier, nominal_step_multiplier;
+unsigned short nominal_OCR1A;
 
 // used by timer1 to optimize interrupt inner loop
-int delta[NUM_AXIES];
-int over[NUM_AXIES];
+int delta_x,delta_y,delta_z;
+int over_x,over_y,over_z;
 int steps_total;
 int steps_taken;
 int accel_until,decel_after;
 long current_feed_rate;
 long old_feed_rate=0;
+long start_feed_rate,end_feed_rate;
+long time_accelerating,time_decelerating;
                      
 
 //------------------------------------------------------------------------------
@@ -270,27 +273,24 @@ void recalculate_acceleration() {
 
 
 /**
- * Set the clock 1 timer frequency.
+ * Set the clock 2 timer frequency.
  * @input desired_freq_hz the desired frequency
+ * Different clock sources can be selected for each timer independently. 
+ * To calculate the timer frequency (for example 2Hz using timer1) you will need:
  */
-FORCE_INLINE void timer_set_frequency(long desired_freq_hz) {
+FORCE_INLINE unsigned short calc_timer(unsigned short desired_freq_hz) {
   if( desired_freq_hz > MAX_FEEDRATE ) desired_freq_hz = MAX_FEEDRATE;
   if( desired_freq_hz < MIN_FEEDRATE ) desired_freq_hz = MIN_FEEDRATE;
-  if( old_feed_rate == desired_freq_hz ) return;
   old_feed_rate = desired_freq_hz;
-  
-  // Source: https://github.com/MarginallyClever/ArduinoTimerInterrupt
-  // Different clock sources can be selected for each timer independently. 
-  // To calculate the timer frequency (for example 2Hz using timer1) you will need:
-  
-  if(desired_freq_hz > 20000 ) {
+
+  if( desired_freq_hz > 20000 ) {
     step_multiplier = 4;
-    desired_freq_hz >>= 2;
-  } else if(desired_freq_hz > 10000 ) {
+    desired_freq_hz = (desired_freq_hz>>2)&0x3fff;
+  } else if( desired_freq_hz > 10000 ) {
     step_multiplier = 2;
-    desired_freq_hz >>= 1;
+    desired_freq_hz = (desired_freq_hz>>1)&0x7fff;
   } else {
-    step_multiplier=1;
+    step_multiplier = 1;
   }
 
   long counter_value = ( CLOCK_FREQ / 8 ) / desired_freq_hz;
@@ -302,8 +302,9 @@ FORCE_INLINE void timer_set_frequency(long desired_freq_hz) {
     counter_value = 100;
   }
 
-  OCR1A = counter_value;
+  return counter_value;
 }
+
 
 
 /**
@@ -321,16 +322,25 @@ ISR(TIMER1_COMPA_vect) {
       digitalWrite( MOTOR_2_DIR_PIN, working_seg->a[2].dir );
       
       // set frequency to segment feed rate
-      timer_set_frequency(working_seg->feed_rate_start);
-      current_feed_rate = working_seg->feed_rate_start;
+      nominal_OCR1A = calc_timer(working_seg->feed_rate_max);
+      nominal_step_multiplier = step_multiplier;
+      
+      start_feed_rate = working_seg->feed_rate_start;
+      end_feed_rate = working_seg->feed_rate_end;
+      current_feed_rate = start_feed_rate;
+      time_decelerating = 0;
+      time_accelerating = calc_timer(start_feed_rate);
+      OCR1A = time_accelerating;
       
       // defererencing some data so the loop runs faster.
       steps_total=working_seg->steps_total;
       steps_taken=0;
-      delta[0] = working_seg->a[0].absdelta;
-      delta[1] = working_seg->a[1].absdelta;
-      delta[2] = working_seg->a[2].absdelta;
-      memset(over,0,sizeof(int)*NUM_AXIES);
+      delta_x = working_seg->a[0].absdelta;
+      delta_y = working_seg->a[1].absdelta;
+      delta_z = working_seg->a[2].absdelta;
+      over_x = -steps_total;
+      over_y = -steps_total;
+      over_z = -steps_total;
       accel_until=working_seg->accel_until;
       decel_after=working_seg->decel_after;
       return;
@@ -344,45 +354,49 @@ ISR(TIMER1_COMPA_vect) {
     // move each axis
     for(int i=0;i<step_multiplier;++i) {
       // M0
-      over[0] += delta[0];
-      if(over[0] >= steps_total) {
+      over_x += delta_x;
+      if(over_x > 0) {
         digitalWrite(MOTOR_0_STEP_PIN,LOW);
-        over[0] -= steps_total;
+        over_x -= steps_total;
         digitalWrite(MOTOR_0_STEP_PIN,HIGH);
       }
       // M1
-      over[1] += delta[1];
-      if(over[1] >= steps_total) {
+      over_y += delta_y;
+      if(over_y > 0) {
         digitalWrite(MOTOR_1_STEP_PIN,LOW);
-        over[1] -= steps_total;
+        over_y -= steps_total;
         digitalWrite(MOTOR_1_STEP_PIN,HIGH);
       }
       // M2
-      over[2] += delta[2];
-      if(over[2] >= steps_total) {
+      over_z += delta_z;
+      if(over_z >= steps_total) {
         digitalWrite(MOTOR_2_STEP_PIN,LOW);
-        over[2] -= steps_total;
+        over_z -= steps_total;
         digitalWrite(MOTOR_2_STEP_PIN,HIGH);
       }
+      // make a step
+      steps_taken++;
+      if(steps_taken>=steps_total) break;
     }
-    
-    // make a step
-    steps_taken++;
 
     // accel
-    float nfr=current_feed_rate;
+    unsigned short t;
     if( steps_taken <= accel_until ) {
-      nfr-=acceleration;
-      if(nfr<MIN_FEEDRATE) nfr = MIN_FEEDRATE;
+      current_feed_rate = (acceleration * time_accelerating / 1000000);
+      current_feed_rate += start_feed_rate;
+      t = calc_timer(current_feed_rate);
+      OCR1A = t;
+      time_accelerating+=t;
     } else if( steps_taken > decel_after ) {
-      nfr+=acceleration;
-      if(nfr>MAX_FEEDRATE) nfr = MAX_FEEDRATE;
+      unsigned short step_time = (acceleration * time_decelerating / 1000000);
+      long end_feed_rate = current_feed_rate - step_time;
+      t = calc_timer(end_feed_rate);
+      OCR1A = t;
+      time_decelerating+=t;
+    } else {
+      OCR1A = nominal_OCR1A;
+      step_multiplier = nominal_step_multiplier;
     }
-    
-    if(nfr!=current_feed_rate) {
-      current_feed_rate=nfr;
-      timer_set_frequency(current_feed_rate);
-    }      
 
     // Is this segment done?
     if( steps_taken >= steps_total ) {
@@ -470,25 +484,25 @@ void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate) {
   // when should we accelerate and decelerate in this segment? 
   segment_update_trapezoid(&new_seg,new_seg.feed_rate_start,MIN_FEEDRATE);
 
-  last_segment = next_segment;
-
   recalculate_acceleration();
+
+  last_segment = next_segment;
 }
 
 
 /**
-* This file is part of Stewart Platform v2.
+* This file is part of Delta Robot v8.
 *
-* Stewart Platform v2 is free software: you can redistribute it and/or modify
+* Delta Robot v8 is free software: you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 *
-* Stewart Platform v2 is distributed in the hope that it will be useful,
+* Delta Robot v8 is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 * GNU General Public License for more details.
 *
 * You should have received a copy of the GNU General Public License
-* along with Stewart Platform v2. If not, see <http://www.gnu.org/licenses/>.
+* along with Delta Robot v8. If not, see <http://www.gnu.org/licenses/>.
 */
