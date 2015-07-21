@@ -91,7 +91,8 @@ void segment_setup() {
   // turn on CTC mode
   TCCR1B = (1 << WGM12);
   // Set 8x prescaler
-  TCCR1B |= ( 1 << CS11 );
+  //TCCR1B |= ( 1 << CS11 );
+  TCCR1B = (TCCR1B & ~(0x07<<CS10)) | (2<<CS10);
   // enable timer compare interrupt
   TIMSK1 |= (1 << OCIE1A);
   

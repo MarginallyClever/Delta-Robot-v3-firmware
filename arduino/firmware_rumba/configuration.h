@@ -21,19 +21,19 @@
 #define STEPS_PER_TURN       (400.0)  // default number of steps per turn * microsteps
 #define MICROSTEPS           (16.0)  // microstepping on this microcontroller
 
-#define MAX_FEEDRATE         (40000.0)  // depends on timer interrupt & hardware
-#define MIN_FEEDRATE         (500)
-#define DEFAULT_FEEDRATE     (8000.0)
-#define DEFAULT_ACCELERATION (10)
+#define MAX_FEEDRATE         (30000.0)  // depends on timer interrupt & hardware
+#define MIN_FEEDRATE         (1000.0)
+#define DEFAULT_FEEDRATE     (2500.0)
+#define DEFAULT_ACCELERATION (250.0)
 
 #define MAX_ANGLE            (90+85)
 #define MIN_ANGLE            (90-30)
 
+// split long lines into pieces to make them more correct.
+#define MM_PER_SEGMENT       (10)
+#define NUM_TOOLS            (6)
 // related to number of instructions that can be buffered.  must be a power of two > 1.
 #define MAX_SEGMENTS         (32)
-// split long lines into pieces to make them more correct.
-#define MM_PER_SEGMENT       (3)
-#define NUM_TOOLS            (6)
 
 // turn this on if you need the robot to NOT buffer commands
 //#define ONE_COMMAND_AT_A_TIME  (1)
@@ -46,6 +46,9 @@
 #define MICROSTEP_PER_DEGREE (MICROSTEPS_PER_TURN/360.0)
 
 
+//------------------------------------------------------------------------------
+// TIMERS
+//------------------------------------------------------------------------------
 // time passed with no instruction?  Make sure PC knows we are waiting.
 #define TIMEOUT_OK           (1000)
 // timer stuff
