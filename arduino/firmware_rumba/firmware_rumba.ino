@@ -79,7 +79,7 @@ float feedrate(float nfr) {
  * display helpful information
  */
 void help() {
-  Serial.print(F("Delta Robot v8-"));
+  Serial.print(F("HELLO WORLD! I AM DELTA ROBOT V2-"));
   Serial.println(EEPROM_VERSION);
   Serial.println(F("Please see http://www.github.com/MarginallyClever/DeltaRobotv8 for more information."));
   Serial.println(F("Commands:"));
