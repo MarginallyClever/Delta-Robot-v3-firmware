@@ -25,6 +25,8 @@ int reverse=0;
 // absolute or relative movements?
 int mode_abs=1;
 
+long robot_uid=0;
+
 
 //------------------------------------------------------------------------------
 // METHODS
@@ -79,9 +81,11 @@ float feedrate(float nfr) {
  * display helpful information
  */
 void help() {
-  Serial.print(F("HELLO WORLD! I AM DELTA ROBOT V2-"));
-  Serial.println(EEPROM_VERSION);
-  Serial.println(F("Please see http://www.github.com/MarginallyClever/DeltaRobotv8 for more information."));
+  Serial.print(F("\n\nHELLO WORLD! I AM DELTA ROBOT V3-"));
+  Serial.print(EEPROM_VERSION);
+  Serial.print(F(" #"));
+  Serial.println(robot_uid);
+  Serial.println(F("Please see http://www.marginallyclever.com/ for more information."));
   Serial.println(F("Commands:"));
   Serial.println(F("M17/M18; - enable/disable motors"));
   Serial.println(F("M100; - this help message"));
@@ -94,6 +98,8 @@ void help() {
  * runs once when board turns on/resets.  Initializes variables.
  */
 void setup() {
+  loadConfig();
+  
   Serial.begin(BAUD);  // open coms
 
   motor_setup();
