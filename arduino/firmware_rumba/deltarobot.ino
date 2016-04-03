@@ -405,20 +405,20 @@ char deltarobot_read_switches() {
   
   for(i=0;i<NUM_AXIES;++i) {
     state=digitalRead(robot.arms[i].limit_switch_pin);
-#ifdef DEBUG_SWITCHES
+#ifdef DEBUG_SWITCHES > 0
     Serial.print(state);
     Serial.print('\t');
 #endif
     if(robot.arms[i].limit_switch_state != state) {
       robot.arms[i].limit_switch_state = state;
-#ifdef DEBUG_SWITCHES
+#ifdef DEBUG_SWITCHES > 0
       Serial.print(F("Switch "));
       Serial.println(i,DEC);
 #endif
     }
     if(state == LOW) ++hit;
   }
-#ifdef DEBUG_SWITCHES
+#ifdef DEBUG_SWITCHES > 0
   Serial.print('\n');
 #endif
   return hit;

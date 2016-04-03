@@ -12,6 +12,7 @@
 // CONSTANTS
 //------------------------------------------------------------------------------
 #define VERBOSE              (0)  // increasing number increases output
+#define DEBUG_SWITCHES       (1)  // set to one to see output
 
 #define EEPROM_VERSION       (1)  // firmware version
 
