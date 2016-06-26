@@ -339,9 +339,8 @@ ISR(TIMER1_COMPA_vect) {
       delta_x = working_seg->a[0].absdelta;
       delta_y = working_seg->a[1].absdelta;
       delta_z = working_seg->a[2].absdelta;
-      over_x = -steps_total;
-      over_y = -steps_total;
-      over_z = -steps_total;
+      over_x = -steps_total/2;
+      over_z = over_y = over_x;
       accel_until=working_seg->accel_until;
       decel_after=working_seg->decel_after;
       return;
