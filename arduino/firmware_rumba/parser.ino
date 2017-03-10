@@ -9,7 +9,7 @@
 //------------------------------------------------------------------------------
 // GLOBALS
 //------------------------------------------------------------------------------
-static char buffer[MAX_BUF];  // where we store the message until we get a ';'
+static char serialBuffer[MAX_BUF];  // where we store the message until we get a ';'
 static int sofar;  // how much is in the buffer
 static long last_cmd_time;    // prevent timeouts
 long line_number=0;
@@ -25,8 +25,8 @@ long line_number=0;
  * @input val the return value if /code/ is not found.
  **/
 float parsenumber(char code,float val) {
-  char *ptr=buffer;
-  while(ptr && *ptr && ptr<buffer+sofar) {
+  char *ptr=serialBuffer;
+  while(ptr && *ptr && ptr<serialBuffer+sofar) {
     if(*ptr==code) {
       return atof(ptr+1);
     }
@@ -41,7 +41,7 @@ float parsenumber(char code,float val) {
  * @input code the string.
  * @input val the float.
  */
-void output(char *code,float val) {
+void output(const char *code,float val) {
   Serial.print(code);
   Serial.print(F("="));
   Serial.println(val);
@@ -64,13 +64,13 @@ void outputvector(Vector3 &v,char*name) {
  */
 void parser_processCommand() {
   // blank lines
-  if(buffer[0]==';') return;
+  if(serialBuffer[0]==';') return;
   
   long cmd;
   
   // is there a line number?
   cmd=parsenumber('N',-1);
-  if(cmd!=-1 && buffer[0]=='N') {  // line number must appear first on the line
+  if(cmd!=-1 && serialBuffer[0]=='N') {  // line number must appear first on the line
     if( cmd != line_number ) {
       // wrong line number error
       Serial.print(F("BADLINENUM "));
@@ -79,13 +79,13 @@ void parser_processCommand() {
     }
   
     // is there a checksum?
-    if(strchr(buffer,'*')!=0) {
+    if(strchr(serialBuffer,'*')!=0) {
       // yes.  is it valid?
       char checksum=0;
       int c=0;
-      while(buffer[c]!='*') checksum ^= buffer[c++];
+      while(serialBuffer[c]!='*') checksum ^= serialBuffer[c++];
       c++; // skip *
-      int against = strtod(buffer+c,NULL);
+      int against = strtol(serialBuffer+c,NULL,10);
       if( checksum != against ) {
         Serial.print(F("BADCHECKSUM "));
         Serial.println(line_number);
@@ -100,8 +100,8 @@ void parser_processCommand() {
     line_number++;
   }
   
-  if(!strncmp(buffer,"UID",3) && robot_uid==0) {
-    robot_uid=atoi(strchr(buffer,' ')+1);
+  if(!strncmp(serialBuffer,"UID",3) && robot_uid==0) {
+    robot_uid=atoi(strchr(serialBuffer,' ')+1);
     saveUID();
   }
   
@@ -191,9 +191,9 @@ void parser_listen() {
   while(Serial.available() > 0) {  // if something is available
     char c=Serial.read();  // get it
     Serial.print(c);  // repeat it back so I know you got the message
-    if(sofar<MAX_BUF) buffer[sofar++]=c;  // store it
+    if(sofar<MAX_BUF) serialBuffer[sofar++]=c;  // store it
     if(c=='\n') {
-      buffer[sofar]=0;  // end the buffer so string functions work right
+      serialBuffer[sofar]=0;  // end the buffer so string functions work right
       //Serial.print(F("\r\n"));  // echo a return character for humans
       parser_processCommand();  // do something with the command
 

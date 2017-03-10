@@ -14,8 +14,6 @@
 #define VERBOSE              (0)  // increasing number increases output
 #define DEBUG_SWITCHES       (1)  // set to one to see output
 
-#define EEPROM_VERSION       (1)  // firmware version
-
 #define BAUD                 (57600)  // How fast is the Arduino talking?
 #define MAX_BUF              (64)  // What is the longest message Arduino can store?
 

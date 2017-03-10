@@ -51,7 +51,9 @@ void deltarobot_setup() {
                         sin((float)i*frac)*(CENTER_TO_SHOULDER+SHOULDER_TO_ELBOW),
                         CENTER_TO_FLOOR);
     // Find wrist position.
-    a.elbow.relative=a.elbow.pos;
+    a.elbow.relative.x=a.elbow.pos.x;
+    a.elbow.relative.y=a.elbow.pos.y;
+    a.elbow.relative.z=a.elbow.pos.z;
     a.wrist.relative=Vector3(cos((float)i*frac)*EFFECTOR_TO_WRIST,
                              sin((float)i*frac)*EFFECTOR_TO_WRIST,
                              0);
@@ -384,10 +386,10 @@ void robot_arc(float cx,float cy,float x,float y,float z,float dir,float new_fee
  * print the current position, feedrate, and absolute mode.
  */
 void robot_where() {
-  Vector3 offset_pos = robot_get_end_plus_offset() ;
-  output("X",offset_pos.x);
-  output("Y",offset_pos.y);
-  output("Z",offset_pos.z);
+  Vector3 p = robot_get_end_plus_offset();
+  output("X",p.x);
+  output("Y",p.y);
+  output("Z",p.z);
   output("F",feed_rate);
   output("A",acceleration);
   Serial.println(mode_abs?"ABS":"REL");
@@ -405,20 +407,20 @@ char deltarobot_read_switches() {
   
   for(i=0;i<NUM_AXIES;++i) {
     state=digitalRead(robot.arms[i].limit_switch_pin);
-#ifdef DEBUG_SWITCHES > 0
+#if DEBUG_SWITCHES > 0
     Serial.print(state);
     Serial.print('\t');
 #endif
     if(robot.arms[i].limit_switch_state != state) {
       robot.arms[i].limit_switch_state = state;
-#ifdef DEBUG_SWITCHES > 0
+#if DEBUG_SWITCHES > 0
       Serial.print(F("Switch "));
       Serial.println(i,DEC);
 #endif
     }
     if(state == LOW) ++hit;
   }
-#ifdef DEBUG_SWITCHES > 0
+#if DEBUG_SWITCHES > 0
   Serial.print('\n');
 #endif
   return hit;

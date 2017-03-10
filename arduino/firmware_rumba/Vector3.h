@@ -13,7 +13,6 @@
 
 class Vector3 {
 public:
-  // these usions allow the Vector3 to be used as a color component
   float x;
   float y;
   float z;
