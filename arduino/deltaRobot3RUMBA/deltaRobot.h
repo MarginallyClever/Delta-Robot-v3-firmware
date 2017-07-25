@@ -15,16 +15,34 @@
 // CONSTANTS
 //------------------------------------------------------------------------------
 
+#define MACHINE_STYLE_MARGINALLYCLEVER_V8  1
+#define MACHINE_STYLE_JUDAH                2
+
+// change this bit to match your machine
+#define MACHINE_STYLE MACHINE_STYLE_MARGINALLYCLEVER_V8
+//#define MACHINE_STYLE MACHINE_STYLE_JUDAH
+
+
+#if MACHINE_STYLE == MARGINALLYCLEVER_V8
 // physical measurements of the machine
-#define SHOULDER_TO_ELBOW    (5)  // cm
-#define ELBOW_TO_WRIST       (16.5f)  // cm
+#define CENTER_TO_SHOULDER       (3.77f)  // cm
+#define SHOULDER_TO_ELBOW        (5)  // cm
+#define ELBOW_TO_WRIST           (16.5f)  // cm
+#define EFFECTOR_TO_WRIST        (1.724f)  // cm
+#define CENTER_TO_FLOOR          (18.9)  // cm
+#define DEGREES_ABOVE_HORIZONTAL (24.0f)
+#endif
 
-//#define CENTER_TO_SHOULDER   (5.248f)  // cm
-#define CENTER_TO_SHOULDER   (3.77f)  // cm
-#define EFFECTOR_TO_WRIST    (1.724f)  // cm
 
-#define CENTER_TO_FLOOR      (18.9)  // cm
-
+#if MACHINE_STYLE == JUDAH
+// physical measurements of the machine
+#define CENTER_TO_SHOULDER       (12.65682f)  // cm (f)
+#define SHOULDER_TO_ELBOW        (20.32f)  // cm (Rf)
+#define ELBOW_TO_WRIST           (55.82f)  // cm (Re)
+#define EFFECTOR_TO_WRIST        (1.724f)  // cm (E)
+#define CENTER_TO_FLOOR          (8.89)  // cm
+#define DEGREES_ABOVE_HORIZONTAL (24.0f)
+#endif
 
 
 //------------------------------------------------------------------------------

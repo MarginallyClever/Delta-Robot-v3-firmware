@@ -261,7 +261,7 @@ void robot_find_home() {
 
   // The arms are 24 degrees from straight horizontal when they hit the switch.
   // @TODO: This could be better customized (per-arm).
-  float horizontal = 24;
+  float horizontal = DEGREES_ABOVE_HORIZONTAL;
   long j, steps_to_zero = horizontal * MICROSTEP_PER_DEGREE;
 
   for(i=0;i<NUM_AXIES;++i) {

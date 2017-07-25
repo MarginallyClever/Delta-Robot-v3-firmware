@@ -20,7 +20,7 @@
 #define STEPS_PER_TURN       (400.0)  // default number of steps per turn * microsteps
 #define MICROSTEPS           (16.0)  // microstepping on this microcontroller
 
-#define MAX_FEEDRATE         (30000.0)  // depends on timer interrupt & hardware
+#define MAX_FEEDRATE         (9000.0)  // depends on timer interrupt & hardware
 #define MIN_FEEDRATE         (1000.0)
 #define DEFAULT_FEEDRATE     (2500.0)
 #define DEFAULT_ACCELERATION (250.0)
