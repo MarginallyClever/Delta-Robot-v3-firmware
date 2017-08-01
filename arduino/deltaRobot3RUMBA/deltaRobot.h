@@ -23,10 +23,10 @@
 //#define MACHINE_STYLE MACHINE_STYLE_JUDAH
 
 
-#if MACHINE_STYLE == MARGINALLYCLEVER_V8
+#if MACHINE_STYLE == MACHINE_STYLE_MARGINALLYCLEVER_V8
 // physical measurements of the machine
 #define CENTER_TO_SHOULDER       (3.77f)  // cm
-#define SHOULDER_TO_ELBOW        (5)  // cm
+#define SHOULDER_TO_ELBOW        (5.0f)  // cm
 #define ELBOW_TO_WRIST           (16.5f)  // cm
 #define EFFECTOR_TO_WRIST        (1.724f)  // cm
 #define CENTER_TO_FLOOR          (18.9)  // cm
@@ -34,7 +34,7 @@
 #endif
 
 
-#if MACHINE_STYLE == JUDAH
+#if MACHINE_STYLE == MACHINE_STYLE_JUDAH
 // physical measurements of the machine
 #define CENTER_TO_SHOULDER       (12.65682f)  // cm (f)
 #define SHOULDER_TO_ELBOW        (20.32f)  // cm (Rf)
