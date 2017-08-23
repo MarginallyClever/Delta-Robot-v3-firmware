@@ -114,6 +114,7 @@ void parser_processCommand() {
       robot_line( parsenumber('X',(mode_abs?offset.x:0)) + (mode_abs?0:offset.x),
                   parsenumber('Y',(mode_abs?offset.y:0)) + (mode_abs?0:offset.y),
                   parsenumber('Z',(mode_abs?offset.z:0)) + (mode_abs?0:offset.z),
+                  parsenumber('E',(mode_abs?offset.z:0)) + (mode_abs?0:offset.z),
                   feedrate(parsenumber('F',feed_rate)) );
     break;
   }

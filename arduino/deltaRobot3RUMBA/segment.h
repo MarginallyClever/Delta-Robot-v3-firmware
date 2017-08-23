@@ -42,7 +42,7 @@ struct Segment {
 //------------------------------------------------------------------------------
 // METHODS
 //------------------------------------------------------------------------------
-extern void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate);
+extern void motor_prepare_segment(int n0,int n1,int n2,int n3,float new_feed_rate);
 extern void segment_update_trapezoid(Segment *s,float start_speed,float end_speed);
 extern void recalculate_reverse2(Segment *prev,Segment *current,Segment *next);
 extern void recalculate_forward2(Segment *prev,Segment *current,Segment *next);

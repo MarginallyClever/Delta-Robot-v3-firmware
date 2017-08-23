@@ -44,6 +44,7 @@
 #define MICROSTEPS_PER_TURN  (STEPS_PER_TURN*MICROSTEPS)
 #define MICROSTEP_PER_DEGREE (MICROSTEPS_PER_TURN/360.0)
 
+#define MAX_AXIES     (4)  // code supports up to this many axies.
 
 //------------------------------------------------------------------------------
 // TIMERS
@@ -69,7 +70,7 @@
 //#define MOTHERBOARD 2  // RAMPS 1.4
 
 #if MOTHERBOARD == 1  // RUMBA
-#define NUM_AXIES          (3)  // can go up to 6
+#define NUM_AXIES          (4)  // can go up to 6
 
 
 #define MOTOR_0_DIR_PIN    (16)

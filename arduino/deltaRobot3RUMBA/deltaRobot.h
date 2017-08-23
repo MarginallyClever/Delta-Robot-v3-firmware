@@ -85,8 +85,9 @@ struct Arm {
 
 
 struct DeltaRobot {
-  Arm arms[NUM_AXIES];
-  Vector3 ee;
+  Arm arms[MAX_AXIES];
+  Vector3 ee;  // current position of the end effector
+  float e;  // rotation of the 4th axis
   Joint base;
   Vector3 tool_offset[NUM_TOOLS];
   int current_tool;

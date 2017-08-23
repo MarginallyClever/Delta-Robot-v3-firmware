@@ -10,7 +10,7 @@
 // GLOBALS
 //------------------------------------------------------------------------------
 #if VERBOSE > 2
-char *letter="XYZ";
+char *letter="XYZE";
 #endif
 
 
@@ -48,14 +48,18 @@ void motor_where() {
 /**
  * Use Bresenham's line algorithm to synchronize the movement of all three motors and approximate movement in a straight line.
  */
-void motor_segment(float a0,float a1,float a2,float fr) {
+void motor_segment(float a0,float a1,float a2,float a3,float fr) {
   robot.arms[0].new_step = a0 * MICROSTEP_PER_DEGREE;
   robot.arms[1].new_step = a1 * MICROSTEP_PER_DEGREE;
   robot.arms[2].new_step = a2 * MICROSTEP_PER_DEGREE;
+  #if NUM_AXIES>=4
+  robot.arms[3].new_step = a3 * MICROSTEP_PER_DEGREE;
+  #endif
 
   motor_prepare_segment(robot.arms[0].new_step,
                         robot.arms[1].new_step,
                         robot.arms[2].new_step,
+                        robot.arms[3].new_step,
                         fr);
 }
 
@@ -92,6 +96,13 @@ void motor_setup() {
   robot.arms[2].motor_dir_pin    = MOTOR_2_DIR_PIN;
   robot.arms[2].motor_enable_pin = MOTOR_2_ENABLE_PIN;
   robot.arms[2].limit_switch_pin = MOTOR_2_LIMIT_PIN;
+
+  #if NUM_AXIES >=4
+  robot.arms[3].motor_step_pin   = MOTOR_3_STEP_PIN;
+  robot.arms[3].motor_dir_pin    = MOTOR_3_DIR_PIN;
+  robot.arms[3].motor_enable_pin = MOTOR_3_ENABLE_PIN;
+  robot.arms[3].limit_switch_pin = MOTOR_3_LIMIT_PIN;
+  #endif
   
   for(int i=0;i<NUM_AXIES;++i) {
     // set the motor pin & scale

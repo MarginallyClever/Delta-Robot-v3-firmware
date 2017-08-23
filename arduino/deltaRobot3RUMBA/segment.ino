@@ -25,8 +25,8 @@ int step_multiplier, nominal_step_multiplier;
 unsigned short nominal_OCR1A;
 
 // used by timer1 to optimize interrupt inner loop
-int delta_x,delta_y,delta_z;
-int over_x,over_y,over_z;
+int delta_x,delta_y,delta_z,delta_e;
+int over_x,over_y,over_z,over_e;
 int steps_total;
 int steps_taken;
 int accel_until,decel_after;
@@ -34,7 +34,7 @@ long current_feed_rate;
 long old_feed_rate=0;
 long start_feed_rate,end_feed_rate;
 long time_accelerating,time_decelerating;
-                     
+
 
 //------------------------------------------------------------------------------
 // METHODS
@@ -78,6 +78,7 @@ void segment_setup() {
   old_seg.a[0].step_count=0;
   old_seg.a[1].step_count=0;
   old_seg.a[2].step_count=0;
+  old_seg.a[3].step_count=0;
   working_seg = NULL;
   
   // disable global interrupts
@@ -321,6 +322,7 @@ ISR(TIMER1_COMPA_vect) {
       digitalWrite( MOTOR_0_DIR_PIN, working_seg->a[0].dir );
       digitalWrite( MOTOR_1_DIR_PIN, working_seg->a[1].dir );
       digitalWrite( MOTOR_2_DIR_PIN, working_seg->a[2].dir );
+      digitalWrite( MOTOR_3_DIR_PIN, working_seg->a[3].dir );
       
       // set frequency to segment feed rate
       nominal_OCR1A = calc_timer(working_seg->feed_rate_max);
@@ -339,6 +341,7 @@ ISR(TIMER1_COMPA_vect) {
       delta_x = working_seg->a[0].absdelta;
       delta_y = working_seg->a[1].absdelta;
       delta_z = working_seg->a[2].absdelta;
+      delta_e = working_seg->a[3].absdelta;
       over_x = -steps_total/2;
       over_z = over_y = over_x;
       accel_until=working_seg->accel_until;
@@ -374,6 +377,15 @@ ISR(TIMER1_COMPA_vect) {
         over_z -= steps_total;
         digitalWrite(MOTOR_2_STEP_PIN,HIGH);
       }
+#if NUM_AXIES >=4
+      // M3
+      over_e += delta_e;
+      if(over_e >= steps_total) {
+        digitalWrite(MOTOR_3_STEP_PIN,LOW);
+        over_e -= steps_total;
+        digitalWrite(MOTOR_3_STEP_PIN,HIGH);
+      }
+#endif
       // make a step
       steps_taken++;
       if(steps_taken>=steps_total) break;
@@ -411,7 +423,7 @@ ISR(TIMER1_COMPA_vect) {
 /**
  * Add a segment to the line buffer when there is room.
  */
-void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate) {
+void motor_prepare_segment(int n0,int n1,int n2,int n3,float new_feed_rate) {
   // get the next available spot in the segment buffer
   int next_segment = get_next_segment(last_segment);
   while( next_segment == current_segment ) {
@@ -423,12 +435,12 @@ void motor_prepare_segment(int n0,int n1,int n2,float new_feed_rate) {
   Segment &new_seg = line_segments[last_segment];
   Segment &old_seg = line_segments[prev_segment];
 
-  new_seg.a[0].step_count = n0;
-  new_seg.a[1].step_count = n1;
-  new_seg.a[2].step_count = n2;
-  new_seg.a[0].delta = n0 - old_seg.a[0].step_count;
-  new_seg.a[1].delta = n1 - old_seg.a[1].step_count;
-  new_seg.a[2].delta = n2 - old_seg.a[2].step_count;
+  new_seg.a[0].step_count = n0;  new_seg.a[0].delta = n0 - old_seg.a[0].step_count;
+  new_seg.a[1].step_count = n1;  new_seg.a[1].delta = n1 - old_seg.a[1].step_count;
+  new_seg.a[2].step_count = n2;  new_seg.a[2].delta = n2 - old_seg.a[2].step_count;
+#if NUM_AXIES >=4
+  new_seg.a[3].step_count = n3;  new_seg.a[3].delta = n3 - old_seg.a[3].step_count;
+#endif
   new_seg.feed_rate_max = new_feed_rate;
 
   // the axis that has the most steps will control the overall acceleration

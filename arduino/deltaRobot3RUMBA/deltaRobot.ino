@@ -246,7 +246,12 @@ void update_shoulder_angles() {
   Serial.print(',');
   Serial.print(robot.arms[1].angle);
   Serial.print(',');
-  Serial.println(robot.arms[2].angle);
+  Serial.print(robot.arms[2].angle);
+  #if NUM_AXIES >=4
+  Serial.print(',');
+  Serial.print(robot.arms[3].angle);
+  #endif
+  Serial.println();
 #endif
 }
 
@@ -294,7 +299,7 @@ void robot_find_home() {
  * @param destination y coordinate
  * @param destination z coordinate
  */
-void robot_line(float x, float y, float z,float new_feed_rate) {
+void robot_line(float x, float y, float z,float e,float new_feed_rate) {
   x-=robot.tool_offset[robot.current_tool].x;
   y-=robot.tool_offset[robot.current_tool].y;
   z-=robot.tool_offset[robot.current_tool].z;
@@ -305,11 +310,16 @@ void robot_line(float x, float y, float z,float new_feed_rate) {
   }
 
   Vector3 destination(x,y,z);
-  Vector3 start = robot.ee;  // keep a copy of start for later in this method
-  Vector3 dp = destination - start;  // far do we have to go? 
+  Vector3 sp = robot.ee;  // keep a copy of start for later in this method
+  Vector3 dp = destination - sp;  // far do we have to go? 
 
   // we need some variables in the loop.  Declaring them outside the loop can be more efficient.
   int pieces = ceil(dp.Length() * (float)MM_PER_SEGMENT );
+
+  // 4th axis stuff
+  float se = robot.e;
+  float de = e - se;
+  float pe;
 
   int i;
   float f;
@@ -318,13 +328,15 @@ void robot_line(float x, float y, float z,float new_feed_rate) {
     // find the point between destination and start that we've reached.
     // this is linear interpolation
     f = (float)i / (float)pieces;
-    robot.ee = dp * f + start;
-
+    robot.ee = dp * f + sp;
+    pe = de * f + se;
+    
     update_ik();
     
     motor_segment(robot.arms[0].angle,
                   robot.arms[1].angle,
                   robot.arms[2].angle,
+                  pe,
                   new_feed_rate);
   }
 }
@@ -366,7 +378,9 @@ void robot_arc(float cx,float cy,float x,float y,float z,float dir,float new_fee
 
   int i, segments = floor( len * MM_PER_SEGMENT );
  
-  float nx, ny, nz, angle3, scale;
+  float nx, ny, nz, ne, angle3, scale;
+
+  ne = robot.e;
 
   for(i=1;i<=segments;++i) {
     // interpolate around the arc
@@ -376,8 +390,9 @@ void robot_arc(float cx,float cy,float x,float y,float z,float dir,float new_fee
     nx = cx + cos(angle3) * radius;
     ny = cy + sin(angle3) * radius;
     nz = ( z - offset_pos.z ) * scale + offset_pos.z;
+    // @TODO: rotate 4th axis?
     // send it to the planner
-    robot_line(nx,ny,nz,new_feed_rate);
+    robot_line(nx,ny,nz,ne,new_feed_rate);
   }
 }
 
