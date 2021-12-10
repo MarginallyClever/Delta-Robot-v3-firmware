@@ -1,3 +1,9 @@
 h1. Delta Robot v3 - A kinematic linkage robot for students
 
-Please visit "Marginally Clever":http://www.marginallyclever.com/shop/ for the accompanying hardware kit and links to the support forums and assembly instructions.
+Please visit "Marginally Clever":http://www.marginallyclever.com/shop/ for the accompanying hardware kit.
+
+Please visit https://discord.gg/Q5TZFmB to join our community and talk with other pro-delta people.
+
+h2. What are the measurements?
+
+an interactive calculator is setup at https://www.marginallyclever.com/other/samples/fk-ik-test.html 
